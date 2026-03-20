@@ -276,9 +276,6 @@ export default function DashboardPage() {
                   >
                     <p className={`text-xs font-medium mb-1 ${activeTextColors[idx]} opacity-80`}>{item.label}</p>
                     <p className={`text-3xl font-bold ${activeTextColors[idx]}`}>{item.count}</p>
-                    {item.rejected > 0 && (
-                      <p className={`text-xs mt-1 ${activeTextColors[idx]} opacity-60`}>탈락 {item.rejected}명</p>
-                    )}
                   </div>
                 ))}
               </div>
