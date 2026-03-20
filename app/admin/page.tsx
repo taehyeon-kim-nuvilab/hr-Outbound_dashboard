@@ -37,6 +37,12 @@ export default function AdminPage() {
   const [platforms, setPlatforms] = useState<SourcingPlatform[]>([])
   const [sourcers, setSourcers] = useState<Sourcer[]>([])
   const [loading, setLoading] = useState(true)
+  const [filterPosition, setFilterPosition] = useState('')
+  const [filterSearch, setFilterSearch] = useState('')
+  const [filterSourcer, setFilterSourcer] = useState('')
+  const [filterPlatform, setFilterPlatform] = useState('')
+  const [filterStage, setFilterStage] = useState('')
+  const [filterOutcome, setFilterOutcome] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<CandidateForm>(defaultForm)
@@ -323,6 +329,20 @@ export default function AdminPage() {
     }
   }
 
+  const filteredCandidates = candidates.filter(c => {
+    if (filterPosition && c.position_id !== filterPosition) return false
+    if (filterSourcer && c.sourcer_id !== filterSourcer) return false
+    if (filterPlatform && c.sourcing_platform_id !== filterPlatform) return false
+    if (filterStage && c.stage !== filterStage) return false
+    if (filterOutcome && c.outcome !== filterOutcome) return false
+    if (filterSearch) {
+      const q = filterSearch.toLowerCase()
+      return (c.url?.toLowerCase().includes(q) ?? false)
+    }
+    return true
+  })
+  const isFiltered = !!(filterSearch || filterPosition || filterSourcer || filterPlatform || filterStage || filterOutcome)
+
   return (
     <div>
       {/* Header */}
@@ -363,22 +383,83 @@ export default function AdminPage() {
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 flex flex-wrap gap-3 items-center">
+        <input
+          type="text"
+          value={filterSearch}
+          onChange={e => setFilterSearch(e.target.value)}
+          placeholder="이름 / URL 검색"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[160px]"
+        />
+        <select
+          value={filterPosition}
+          onChange={e => setFilterPosition(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">포지션 전체</option>
+          {positions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+        <select
+          value={filterSourcer}
+          onChange={e => setFilterSourcer(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">담당자 전체</option>
+          {sourcers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+        <select
+          value={filterPlatform}
+          onChange={e => setFilterPlatform(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">플랫폼 전체</option>
+          {platforms.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+        <select
+          value={filterStage}
+          onChange={e => setFilterStage(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">단계 전체</option>
+          {STAGES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
+        <select
+          value={filterOutcome}
+          onChange={e => setFilterOutcome(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">결과 전체</option>
+          {OUTCOMES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        {(filterSearch || filterPosition || filterSourcer || filterPlatform || filterStage || filterOutcome) && (
+          <button
+            onClick={() => { setFilterSearch(''); setFilterPosition(''); setFilterSourcer(''); setFilterPlatform(''); setFilterStage(''); setFilterOutcome('') }}
+            className="text-sm text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap"
+          >
+            초기화
+          </button>
+        )}
+      </div>
+
       {/* Table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-base font-semibold text-gray-900">후보자 목록</h2>
-          <span className="text-sm text-gray-500">총 {candidates.length}명</span>
+          <span className="text-sm text-gray-500">
+            {isFiltered ? `${filteredCandidates.length}명 (전체 ${candidates.length}명)` : `총 ${candidates.length}명`}
+          </span>
         </div>
         {loading ? (
           <div className="flex justify-center items-center h-32">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
-        ) : candidates.length === 0 ? (
+        ) : filteredCandidates.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-gray-400">
             <svg className="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <p className="text-sm">후보자가 없습니다. 추가해보세요!</p>
+            <p className="text-sm">{isFiltered ? '필터 조건에 맞는 후보자가 없습니다.' : '후보자가 없습니다. 추가해보세요!'}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -397,7 +478,7 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {candidates.map(c => (
+                {filteredCandidates.map(c => (
                   <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {c.position?.name ?? <span className="text-gray-400">-</span>}
