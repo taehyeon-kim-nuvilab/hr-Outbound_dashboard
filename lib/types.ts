@@ -1,0 +1,75 @@
+export interface Position {
+  id: string
+  name: string
+  created_at: string
+}
+
+export interface SourcingPlatform {
+  id: string
+  name: string
+  created_at: string
+}
+
+export interface Candidate {
+  id: string
+  position_id: string | null
+  url: string | null
+  sourcing_platform_id: string | null
+  stage: Stage
+  outcome: Outcome
+  memo: string | null
+  proposal_date: string | null
+  created_at: string
+  updated_at: string
+  position?: Position | null
+  sourcing_platform?: SourcingPlatform | null
+}
+
+export type Stage =
+  | 'proposal_sent'
+  | 'applied'
+  | 'phone_interview'
+  | 'job_interview'
+  | 'culture_interview'
+  | 'final_accepted'
+  | 'joined'
+
+export type Outcome = 'in_progress' | 'rejected' | 'withdrawn'
+
+export interface FunnelStats {
+  stage: Stage
+  label: string
+  count: number
+  percent: number
+}
+
+export interface DashboardStats {
+  funnel: FunnelStats[]
+  total: number
+}
+
+export const STAGES = [
+  { value: 'proposal_sent', label: '제안 발송' },
+  { value: 'applied', label: '지원' },
+  { value: 'phone_interview', label: '전화 인터뷰' },
+  { value: 'job_interview', label: '직무 인터뷰' },
+  { value: 'culture_interview', label: '컬처 인터뷰' },
+  { value: 'final_accepted', label: '최종 합격' },
+  { value: 'joined', label: '최종 합류' },
+] as const
+
+export const OUTCOMES = [
+  { value: 'in_progress', label: '진행 중' },
+  { value: 'rejected', label: '탈락' },
+  { value: 'withdrawn', label: '포기' },
+] as const
+
+export const STAGE_ORDER: Stage[] = [
+  'proposal_sent',
+  'applied',
+  'phone_interview',
+  'job_interview',
+  'culture_interview',
+  'final_accepted',
+  'joined',
+]

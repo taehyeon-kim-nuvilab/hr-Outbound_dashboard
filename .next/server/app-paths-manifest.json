@@ -1,0 +1,10 @@
+{
+  "/admin/settings/page": "app/admin/settings/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/api/dashboard/route": "app/api/dashboard/route.js",
+  "/api/positions/route": "app/api/positions/route.js",
+  "/api/candidates/route": "app/api/candidates/route.js",
+  "/api/candidates/check-url/route": "app/api/candidates/check-url/route.js",
+  "/api/sourcing-platforms/route": "app/api/sourcing-platforms/route.js"
+}
