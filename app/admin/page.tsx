@@ -251,13 +251,16 @@ export default function AdminPage() {
         const positionName = cols[1] || ''
         const url = cols[2] || ''
         const platformName = cols[3] || ''
-        const stageLabel = cols[4] || '제안 발송'
-        const outcomeLabel = cols[5] || '진행 중'
-        const memo = cols[6] || ''
-        const proposal_date = cols[7] || today
+        const sourcerName = cols[4] || ''
+        const stageLabel = cols[5] || '제안 발송'
+        const outcomeLabel = cols[6] || '진행 중'
+        const memo = cols[7] || ''
+        const proposal_date = cols[8] || today
+        const ninehire_url = cols[9] || ''
 
         const position = positions.find(p => p.name === positionName)
         const platform = platforms.find(p => p.name === platformName)
+        const sourcer = sourcers.find(s => s.name === sourcerName)
 
         return {
           _row: rowNum,
@@ -266,6 +269,9 @@ export default function AdminPage() {
           url,
           sourcing_platform_id: platform?.id || null,
           platform_name: platformName,
+          sourcer_id: sourcer?.id || null,
+          sourcer_name: sourcerName,
+          ninehire_url: ninehire_url || null,
           stage: stageMap[stageLabel] || 'proposal_sent',
           stage_label: stageLabel,
           outcome: outcomeMap[outcomeLabel] || 'in_progress',
@@ -309,8 +315,8 @@ export default function AdminPage() {
   }
 
   const downloadTemplate = () => {
-    const header = '번호,포지션,URL,소싱플랫폼,단계,결과,메모,제안발송날짜'
-    const example = `1,Recruiting Manager,https://linkedin.com/in/example,LinkedIn,제안 발송,진행 중,,${today}`
+    const header = '번호,포지션,URL,소싱플랫폼,담당자,단계,결과,메모,제안발송날짜,나인하이어URL'
+    const example = `1,Recruiting Manager,https://linkedin.com/in/example,LinkedIn,김태현,제안 발송,진행 중,,${today},`
     const blob = new Blob(['\uFEFF' + header + '\n' + example], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url; a.download = 'candidates_template.csv'; a.click()
@@ -809,7 +815,7 @@ export default function AdminPage() {
             <div className="px-6 py-5 space-y-4">
               <div className="bg-blue-50 rounded-lg px-4 py-3 text-sm text-blue-700">
                 <p className="font-medium mb-1">CSV 파일 형식</p>
-                <p className="text-xs text-blue-600">포지션, URL, 소싱플랫폼, 단계, 결과, 메모, 제안발송날짜 순서로 작성해주세요.</p>
+                <p className="text-xs text-blue-600">포지션, URL, 소싱플랫폼, 담당자, 단계, 결과, 메모, 제안발송날짜, 나인하이어URL 순서로 작성해주세요.</p>
                 <p className="text-xs text-blue-600 mt-0.5">단계: 제안 발송 / 지원 / 전화 인터뷰 / 직무 인터뷰 / 컬처 인터뷰 / 최종 합격 / 최종 합류</p>
                 <p className="text-xs text-blue-600">결과: 진행 중 / 탈락 / 포기</p>
               </div>
@@ -840,9 +846,11 @@ export default function AdminPage() {
                           <th className="px-3 py-2 text-left text-gray-500">포지션</th>
                           <th className="px-3 py-2 text-left text-gray-500">URL</th>
                           <th className="px-3 py-2 text-left text-gray-500">플랫폼</th>
+                          <th className="px-3 py-2 text-left text-gray-500">담당자</th>
                           <th className="px-3 py-2 text-left text-gray-500">단계</th>
                           <th className="px-3 py-2 text-left text-gray-500">결과</th>
                           <th className="px-3 py-2 text-left text-gray-500">날짜</th>
+                          <th className="px-3 py-2 text-left text-gray-500">나인하이어URL</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -856,16 +864,20 @@ export default function AdminPage() {
                             <td className="px-3 py-2 text-gray-700">
                               {row.sourcing_platform_id ? row.platform_name : <span className="text-amber-600">{row.platform_name || '-'} ⚠</span>}
                             </td>
+                            <td className="px-3 py-2 text-gray-700">
+                              {row.sourcer_name ? (row.sourcer_id ? row.sourcer_name : <span className="text-amber-600">{row.sourcer_name} ⚠</span>) : '-'}
+                            </td>
                             <td className="px-3 py-2 text-gray-700">{row.stage_label}</td>
                             <td className="px-3 py-2 text-gray-700">{row.outcome_label}</td>
                             <td className="px-3 py-2 text-gray-500">{row.proposal_date}</td>
+                            <td className="px-3 py-2 text-gray-500 max-w-[100px] truncate">{row.ninehire_url || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                  {csvPreview.some((r: any) => !r.position_id && r.position_name) && (
-                    <p className="text-xs text-amber-600 mt-1">⚠ 표시는 등록되지 않은 포지션/플랫폼입니다. 설정에서 먼저 추가해주세요.</p>
+                  {csvPreview.some((r: any) => (!r.position_id && r.position_name) || (!r.sourcer_id && r.sourcer_name)) && (
+                    <p className="text-xs text-amber-600 mt-1">⚠ 표시는 등록되지 않은 포지션/플랫폼/담당자입니다. 설정에서 먼저 추가해주세요.</p>
                   )}
                 </div>
               )}
