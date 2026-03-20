@@ -285,56 +285,6 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Sourcer Breakdown */}
-          {sourcers.length > 0 && !selectedSourcer && (
-            <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">담당자별 현황</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left py-2 pr-4 text-xs font-medium text-gray-400">담당자</th>
-                      <th className="text-right py-2 pr-4 text-xs font-medium text-gray-400">제안</th>
-                      <th className="text-right py-2 pr-4 text-xs font-medium text-gray-400">지원</th>
-                      <th className="text-right py-2 pr-4 text-xs font-medium text-gray-400">전화</th>
-                      <th className="text-right py-2 pr-4 text-xs font-medium text-gray-400">직무</th>
-                      <th className="text-right py-2 pr-4 text-xs font-medium text-gray-400">컬처</th>
-                      <th className="text-right py-2 pr-4 text-xs font-medium text-gray-400">최합</th>
-                      <th className="text-right py-2 text-xs font-medium text-gray-400">합류</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {sourcers.map(sourcer => {
-                      const srcCands = candidates.filter(c => c.sourcer_id === sourcer.id)
-                      if (srcCands.length === 0) return null
-                      const counts = STAGE_ORDER.map((stage, i) =>
-                        srcCands.filter(c => (STAGE_ORDER.slice(i) as Stage[]).includes(c.stage as Stage)).length
-                      )
-                      return (
-                        <tr key={sourcer.id} className="hover:bg-gray-50">
-                          <td className="py-2.5 pr-4 font-medium text-gray-800">{sourcer.name}</td>
-                          {counts.map((count, i) => (
-                            <td key={i} className="py-2.5 pr-4 text-right text-gray-600">{count}</td>
-                          ))}
-                        </tr>
-                      )
-                    })}
-                    {candidates.filter(c => !c.sourcer_id).length > 0 && (
-                      <tr className="hover:bg-gray-50">
-                        <td className="py-2.5 pr-4 text-gray-400">미지정</td>
-                        {STAGE_ORDER.map((stage, i) => {
-                          const unassigned = candidates.filter(c => !c.sourcer_id)
-                          const count = unassigned.filter(c => (STAGE_ORDER.slice(i) as Stage[]).includes(c.stage as Stage)).length
-                          return <td key={i} className="py-2.5 pr-4 text-right text-gray-400">{count}</td>
-                        })}
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
           {/* Candidate List */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
@@ -443,6 +393,56 @@ export default function DashboardPage() {
               )
             })()}
           </div>
+
+          {/* Sourcer Breakdown */}
+          {sourcers.length > 0 && !selectedSourcer && (
+            <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">담당자별 현황</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left py-2 pr-4 text-xs font-medium text-gray-400">담당자</th>
+                      <th className="text-right py-2 pr-4 text-xs font-medium text-gray-400">제안</th>
+                      <th className="text-right py-2 pr-4 text-xs font-medium text-gray-400">지원</th>
+                      <th className="text-right py-2 pr-4 text-xs font-medium text-gray-400">전화</th>
+                      <th className="text-right py-2 pr-4 text-xs font-medium text-gray-400">직무</th>
+                      <th className="text-right py-2 pr-4 text-xs font-medium text-gray-400">컬처</th>
+                      <th className="text-right py-2 pr-4 text-xs font-medium text-gray-400">최합</th>
+                      <th className="text-right py-2 text-xs font-medium text-gray-400">합류</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {sourcers.map(sourcer => {
+                      const srcCands = candidates.filter(c => c.sourcer_id === sourcer.id)
+                      if (srcCands.length === 0) return null
+                      const counts = STAGE_ORDER.map((stage, i) =>
+                        srcCands.filter(c => (STAGE_ORDER.slice(i) as Stage[]).includes(c.stage as Stage)).length
+                      )
+                      return (
+                        <tr key={sourcer.id} className="hover:bg-gray-50">
+                          <td className="py-2.5 pr-4 font-medium text-gray-800">{sourcer.name}</td>
+                          {counts.map((count, i) => (
+                            <td key={i} className="py-2.5 pr-4 text-right text-gray-600">{count}</td>
+                          ))}
+                        </tr>
+                      )
+                    })}
+                    {candidates.filter(c => !c.sourcer_id).length > 0 && (
+                      <tr className="hover:bg-gray-50">
+                        <td className="py-2.5 pr-4 text-gray-400">미지정</td>
+                        {STAGE_ORDER.map((stage, i) => {
+                          const unassigned = candidates.filter(c => !c.sourcer_id)
+                          const count = unassigned.filter(c => (STAGE_ORDER.slice(i) as Stage[]).includes(c.stage as Stage)).length
+                          return <td key={i} className="py-2.5 pr-4 text-right text-gray-400">{count}</td>
+                        })}
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
