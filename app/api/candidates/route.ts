@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { position_id, url, sourcing_platform_id, sourcer_id, stage, outcome, memo, proposal_date } = body
+    const { position_id, url, ninehire_url, sourcing_platform_id, sourcer_id, stage, outcome, memo, proposal_date } = body
 
     if (!stage) {
       return NextResponse.json({ error: '단계는 필수입니다.' }, { status: 400 })
@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
       .insert({
         position_id: position_id || null,
         url: url || null,
+        ninehire_url: ninehire_url || null,
         sourcing_platform_id: sourcing_platform_id || null,
         sourcer_id: sourcer_id || null,
         stage,

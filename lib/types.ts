@@ -22,6 +22,7 @@ export interface Candidate {
   url: string | null
   sourcing_platform_id: string | null
   sourcer_id: string | null
+  ninehire_url: string | null
   stage: Stage
   outcome: Outcome
   memo: string | null

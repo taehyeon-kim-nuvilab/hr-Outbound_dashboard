@@ -8,6 +8,7 @@ import type { Candidate, Position, SourcingPlatform, Sourcer, Stage, Outcome } f
 interface CandidateForm {
   position_id: string
   url: string
+  ninehire_url: string
   sourcing_platform_id: string
   sourcer_id: string
   stage: Stage
@@ -21,6 +22,7 @@ const today = new Date().toISOString().split('T')[0]
 const defaultForm: CandidateForm = {
   position_id: '',
   url: '',
+  ninehire_url: '',
   sourcing_platform_id: '',
   sourcer_id: '',
   stage: 'proposal_sent',
@@ -91,6 +93,7 @@ export default function AdminPage() {
     setForm({
       position_id: c.position_id ?? '',
       url: c.url ?? '',
+      ninehire_url: c.ninehire_url ?? '',
       sourcing_platform_id: c.sourcing_platform_id ?? '',
       sourcer_id: c.sourcer_id ?? '',
       stage: c.stage,
@@ -148,6 +151,7 @@ export default function AdminPage() {
     const body = {
       position_id: form.position_id || null,
       url: form.url || null,
+      ninehire_url: form.ninehire_url || null,
       sourcing_platform_id: form.sourcing_platform_id || null,
       sourcer_id: form.sourcer_id || null,
       stage: form.stage,
@@ -184,14 +188,14 @@ export default function AdminPage() {
     }
   }
 
-  const handleInlineUpdate = async (id: string, field: 'stage' | 'outcome', value: string) => {
+  const handleInlineUpdate = async (id: string, field: 'stage' | 'outcome' | 'sourcer_id', value: string) => {
     const candidate = candidates.find(c => c.id === id)
     if (!candidate) return
     const body = {
       position_id: candidate.position_id,
       url: candidate.url,
       sourcing_platform_id: candidate.sourcing_platform_id,
-      sourcer_id: candidate.sourcer_id,
+      sourcer_id: field === 'sourcer_id' ? (value || null) : candidate.sourcer_id,
       stage: field === 'stage' ? value : candidate.stage,
       outcome: field === 'outcome' ? value : candidate.outcome,
       memo: candidate.memo,
@@ -383,6 +387,7 @@ export default function AdminPage() {
                 <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">포지션</th>
                   <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">URL/이름</th>
+                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">나인하이어</th>
                   <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">담당자</th>
                   <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">소싱 플랫폼</th>
                   <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">단계</th>
@@ -416,8 +421,25 @@ export default function AdminPage() {
                         <span className="text-gray-400">-</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {c.sourcer?.name ?? <span className="text-gray-400">-</span>}
+                    <td className="px-6 py-4 text-sm">
+                      {c.ninehire_url ? (
+                        <a href={c.ninehire_url} target="_blank" rel="noopener noreferrer"
+                          className="text-orange-500 hover:text-orange-700 hover:underline text-xs font-medium">
+                          나인하이어 ↗
+                        </a>
+                      ) : <span className="text-gray-300">-</span>}
+                    </td>
+                    <td className="px-6 py-4">
+                      <select
+                        value={c.sourcer_id ?? ''}
+                        onChange={e => handleInlineUpdate(c.id, 'sourcer_id', e.target.value)}
+                        className="text-xs font-medium bg-purple-50 text-purple-700 border-0 rounded-full px-2.5 py-0.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-300"
+                      >
+                        <option value="">미지정</option>
+                        {sourcers.map(s => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {c.sourcing_platform?.name ?? <span className="text-gray-400">-</span>}
@@ -535,6 +557,20 @@ export default function AdminPage() {
                     <p className="text-xs text-amber-600">{urlWarning}</p>
                   </div>
                 )}
+              </div>
+
+              {/* NineHire URL */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  나인하이어 링크 <span className="text-gray-400 font-normal text-xs">(선택)</span>
+                </label>
+                <input
+                  type="url"
+                  value={form.ninehire_url}
+                  onChange={e => setForm(f => ({ ...f, ninehire_url: e.target.value }))}
+                  placeholder="https://app.ninehire.com/..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
 
               {/* Sourcing Platform */}
