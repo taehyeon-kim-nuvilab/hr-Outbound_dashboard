@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ isDuplicate: false })
     }
 
-    const position = data.position as { name: string } | null
+    const position = data.position as unknown as { name: string } | null
 
     return NextResponse.json({
       isDuplicate: true,
