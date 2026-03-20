@@ -3,12 +3,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { STAGES, OUTCOMES } from '@/lib/types'
-import type { Candidate, Position, SourcingPlatform, Stage, Outcome } from '@/lib/types'
+import type { Candidate, Position, SourcingPlatform, Sourcer, Stage, Outcome } from '@/lib/types'
 
 interface CandidateForm {
   position_id: string
   url: string
   sourcing_platform_id: string
+  sourcer_id: string
   stage: Stage
   outcome: Outcome
   memo: string
@@ -21,6 +22,7 @@ const defaultForm: CandidateForm = {
   position_id: '',
   url: '',
   sourcing_platform_id: '',
+  sourcer_id: '',
   stage: 'proposal_sent',
   outcome: 'in_progress',
   memo: '',
@@ -31,6 +33,7 @@ export default function AdminPage() {
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [positions, setPositions] = useState<Position[]>([])
   const [platforms, setPlatforms] = useState<SourcingPlatform[]>([])
+  const [sourcers, setSourcers] = useState<Sourcer[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -48,19 +51,22 @@ export default function AdminPage() {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [candRes, posRes, platRes] = await Promise.all([
+      const [candRes, posRes, platRes, srcRes] = await Promise.all([
         fetch('/api/candidates'),
         fetch('/api/positions'),
         fetch('/api/sourcing-platforms'),
+        fetch('/api/sourcers'),
       ])
-      const [cands, pos, plat] = await Promise.all([
+      const [cands, pos, plat, src] = await Promise.all([
         candRes.json(),
         posRes.json(),
         platRes.json(),
+        srcRes.json(),
       ])
       setCandidates(Array.isArray(cands) ? cands : [])
       setPositions(Array.isArray(pos) ? pos : [])
       setPlatforms(Array.isArray(plat) ? plat : [])
+      setSourcers(Array.isArray(src) ? src : [])
     } catch (err) {
       console.error(err)
     } finally {
@@ -86,6 +92,7 @@ export default function AdminPage() {
       position_id: c.position_id ?? '',
       url: c.url ?? '',
       sourcing_platform_id: c.sourcing_platform_id ?? '',
+      sourcer_id: c.sourcer_id ?? '',
       stage: c.stage,
       outcome: c.outcome,
       memo: c.memo ?? '',
@@ -99,6 +106,13 @@ export default function AdminPage() {
   const checkUrl = useCallback(async (url: string) => {
     if (!url.trim()) {
       setUrlWarning(null)
+      return
+    }
+    // URL 형식인 경우에만 중복 체크
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      // 이름 중복 체크 (안내만)
+      const isDupName = candidates.some(c => c.url === url && c.id !== editingId)
+      setUrlWarning(isDupName ? `동일한 이름이 이미 등록되어 있습니다.` : null)
       return
     }
     setUrlChecking(true)
@@ -135,6 +149,7 @@ export default function AdminPage() {
       position_id: form.position_id || null,
       url: form.url || null,
       sourcing_platform_id: form.sourcing_platform_id || null,
+      sourcer_id: form.sourcer_id || null,
       stage: form.stage,
       outcome: form.outcome,
       memo: form.memo || null,
@@ -176,6 +191,7 @@ export default function AdminPage() {
       position_id: candidate.position_id,
       url: candidate.url,
       sourcing_platform_id: candidate.sourcing_platform_id,
+      sourcer_id: candidate.sourcer_id,
       stage: field === 'stage' ? value : candidate.stage,
       outcome: field === 'outcome' ? value : candidate.outcome,
       memo: candidate.memo,
@@ -366,7 +382,8 @@ export default function AdminPage() {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">포지션</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">URL</th>
+                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">URL/이름</th>
+                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">담당자</th>
                   <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">소싱 플랫폼</th>
                   <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">단계</th>
                   <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">결과</th>
@@ -382,18 +399,25 @@ export default function AdminPage() {
                     </td>
                     <td className="px-6 py-4 text-sm max-w-[180px]">
                       {c.url ? (
-                        <a
-                          href={c.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline truncate block max-w-[180px]"
-                          title={c.url}
-                        >
-                          {c.url}
-                        </a>
+                        c.url.startsWith('http://') || c.url.startsWith('https://') ? (
+                          <a
+                            href={c.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline truncate block max-w-[180px]"
+                            title={c.url}
+                          >
+                            {c.url}
+                          </a>
+                        ) : (
+                          <span className="text-gray-700 truncate block max-w-[180px]">{c.url}</span>
+                        )
                       ) : (
                         <span className="text-gray-400">-</span>
                       )}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {c.sourcer?.name ?? <span className="text-gray-400">-</span>}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {c.sourcing_platform?.name ?? <span className="text-gray-400">-</span>}
@@ -485,14 +509,14 @@ export default function AdminPage() {
 
               {/* URL */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">URL</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">URL / 이름</label>
                 <div className="relative">
                   <input
-                    type="url"
+                    type="text"
                     value={form.url}
                     onChange={e => setForm(f => ({ ...f, url: e.target.value }))}
                     onBlur={handleUrlBlur}
-                    placeholder="https://linkedin.com/in/..."
+                    placeholder="https://linkedin.com/in/... 또는 이름 직접 입력"
                     className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                       urlWarning ? 'border-amber-300 bg-amber-50' : 'border-gray-300'
                     }`}
@@ -524,6 +548,21 @@ export default function AdminPage() {
                   <option value="">선택 안 함</option>
                   {platforms.map(p => (
                     <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Sourcer */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">아웃바운드 담당자</label>
+                <select
+                  value={form.sourcer_id}
+                  onChange={e => setForm(f => ({ ...f, sourcer_id: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">선택 안 함</option>
+                  {sourcers.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
               </div>

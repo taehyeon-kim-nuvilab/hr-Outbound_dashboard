@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const positionId = searchParams.get('position_id')
+    const sourcerId = searchParams.get('sourcer_id')
     const stage = searchParams.get('stage')
     const startDate = searchParams.get('start_date')
     const endDate = searchParams.get('end_date')
@@ -15,12 +16,17 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         position:positions(id, name, created_at),
-        sourcing_platform:sourcing_platforms(id, name, created_at)
+        sourcing_platform:sourcing_platforms(id, name, created_at),
+        sourcer:sourcers(id, name, created_at)
       `)
       .order('proposal_date', { ascending: false })
 
     if (positionId) {
       query = query.eq('position_id', positionId)
+    }
+
+    if (sourcerId) {
+      query = query.eq('sourcer_id', sourcerId)
     }
 
     if (startDate) {
@@ -56,7 +62,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { position_id, url, sourcing_platform_id, stage, outcome, memo, proposal_date } = body
+    const { position_id, url, sourcing_platform_id, sourcer_id, stage, outcome, memo, proposal_date } = body
 
     if (!stage) {
       return NextResponse.json({ error: '단계는 필수입니다.' }, { status: 400 })
@@ -74,6 +80,7 @@ export async function POST(request: NextRequest) {
         position_id: position_id || null,
         url: url || null,
         sourcing_platform_id: sourcing_platform_id || null,
+        sourcer_id: sourcer_id || null,
         stage,
         outcome: outcome || 'in_progress',
         memo: memo || null,
@@ -82,7 +89,8 @@ export async function POST(request: NextRequest) {
       .select(`
         *,
         position:positions(id, name, created_at),
-        sourcing_platform:sourcing_platforms(id, name, created_at)
+        sourcing_platform:sourcing_platforms(id, name, created_at),
+        sourcer:sourcers(id, name, created_at)
       `)
       .single()
 

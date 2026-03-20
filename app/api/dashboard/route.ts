@@ -7,15 +7,20 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const positionId = searchParams.get('position_id')
+    const sourcerId = searchParams.get('sourcer_id')
     const startDate = searchParams.get('start_date')
     const endDate = searchParams.get('end_date')
 
     let query = supabase
       .from('candidates')
-      .select('id, stage, position_id, proposal_date')
+      .select('id, stage, position_id, sourcer_id, proposal_date')
 
     if (positionId) {
       query = query.eq('position_id', positionId)
+    }
+
+    if (sourcerId) {
+      query = query.eq('sourcer_id', sourcerId)
     }
 
     if (startDate) {
@@ -35,10 +40,15 @@ export async function GET(request: NextRequest) {
 
     const total = candidates?.length ?? 0
 
-    // For each stage at index i, count candidates whose stage is in STAGE_ORDER.slice(i)
+    // proposal_sent, applied: cumulative / phone_interview onwards: independent (exactly at stage)
     const funnel = STAGE_ORDER.map((stage, i) => {
-      const includedStages = STAGE_ORDER.slice(i) as Stage[]
-      const count = candidates?.filter(c => includedStages.includes(c.stage as Stage)).length ?? 0
+      let count: number
+      if (i <= 1) {
+        const includedStages = STAGE_ORDER.slice(i) as Stage[]
+        count = candidates?.filter(c => includedStages.includes(c.stage as Stage)).length ?? 0
+      } else {
+        count = candidates?.filter(c => c.stage === stage).length ?? 0
+      }
       const percent = total > 0 ? (count / total) * 100 : 0
       const label = STAGES.find(s => s.value === stage)?.label ?? stage
 

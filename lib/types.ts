@@ -10,11 +10,18 @@ export interface SourcingPlatform {
   created_at: string
 }
 
+export interface Sourcer {
+  id: string
+  name: string
+  created_at: string
+}
+
 export interface Candidate {
   id: string
   position_id: string | null
   url: string | null
   sourcing_platform_id: string | null
+  sourcer_id: string | null
   stage: Stage
   outcome: Outcome
   memo: string | null
@@ -23,6 +30,7 @@ export interface Candidate {
   updated_at: string
   position?: Position | null
   sourcing_platform?: SourcingPlatform | null
+  sourcer?: Sourcer | null
 }
 
 export type Stage =

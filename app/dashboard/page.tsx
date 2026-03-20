@@ -2,15 +2,17 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { STAGES, OUTCOMES, STAGE_ORDER } from '@/lib/types'
-import type { Candidate, Position, FunnelStats, Stage } from '@/lib/types'
+import type { Candidate, Position, Sourcer, FunnelStats, Stage } from '@/lib/types'
 
 export default function DashboardPage() {
   const [positions, setPositions] = useState<Position[]>([])
+  const [sourcers, setSourcers] = useState<Sourcer[]>([])
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [funnel, setFunnel] = useState<FunnelStats[]>([])
   const [total, setTotal] = useState(0)
   const [selectedPosition, setSelectedPosition] = useState('')
   const [selectedStage, setSelectedStage] = useState('')
+  const [selectedSourcer, setSelectedSourcer] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [listStageFilter, setListStageFilter] = useState('')
@@ -20,10 +22,11 @@ export default function DashboardPage() {
   useEffect(() => {
     fetch('/api/positions')
       .then(r => r.json())
-      .then(data => {
-        console.log('positions response:', data)
-        setPositions(Array.isArray(data) ? data : [])
-      })
+      .then(data => setPositions(Array.isArray(data) ? data : []))
+      .catch(console.error)
+    fetch('/api/sourcers')
+      .then(r => r.json())
+      .then(data => setSourcers(Array.isArray(data) ? data : []))
       .catch(console.error)
   }, [])
 
@@ -33,6 +36,7 @@ export default function DashboardPage() {
       const params = new URLSearchParams()
       if (selectedPosition) params.set('position_id', selectedPosition)
       if (selectedStage) params.set('stage', selectedStage)
+      if (selectedSourcer) params.set('sourcer_id', selectedSourcer)
       if (startDate) params.set('start_date', startDate)
       if (endDate) params.set('end_date', endDate)
 
@@ -51,7 +55,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
-  }, [selectedPosition, selectedStage, startDate, endDate])
+  }, [selectedPosition, selectedStage, selectedSourcer, startDate, endDate])
 
   useEffect(() => {
     fetchData()
@@ -133,6 +137,19 @@ export default function DashboardPage() {
           </select>
         </div>
         <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-gray-700 whitespace-nowrap">담당자</label>
+          <select
+            value={selectedSourcer}
+            onChange={e => setSelectedSourcer(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">전체</option>
+            {sourcers.map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-gray-700 whitespace-nowrap">기간</label>
           <input
             type="date"
@@ -148,9 +165,9 @@ export default function DashboardPage() {
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
-        {(selectedPosition || selectedStage || startDate || endDate) && (
+        {(selectedPosition || selectedStage || selectedSourcer || startDate || endDate) && (
           <button
-            onClick={() => { setSelectedPosition(''); setSelectedStage(''); setStartDate(''); setEndDate('') }}
+            onClick={() => { setSelectedPosition(''); setSelectedStage(''); setSelectedSourcer(''); setStartDate(''); setEndDate('') }}
             className="text-sm text-blue-600 hover:text-blue-800 font-medium"
           >
             필터 초기화
@@ -268,6 +285,59 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {/* Sourcer Breakdown */}
+      {sourcers.length > 0 && !selectedSourcer && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">담당자별 현황</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left py-2 pr-4 text-xs font-medium text-gray-400">담당자</th>
+                  <th className="text-right py-2 pr-4 text-xs font-medium text-gray-400">제안</th>
+                  <th className="text-right py-2 pr-4 text-xs font-medium text-gray-400">지원</th>
+                  <th className="text-right py-2 pr-4 text-xs font-medium text-gray-400">전화</th>
+                  <th className="text-right py-2 pr-4 text-xs font-medium text-gray-400">직무</th>
+                  <th className="text-right py-2 pr-4 text-xs font-medium text-gray-400">컬처</th>
+                  <th className="text-right py-2 pr-4 text-xs font-medium text-gray-400">최합</th>
+                  <th className="text-right py-2 text-xs font-medium text-gray-400">합류</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {sourcers.map(sourcer => {
+                  const srcCands = candidates.filter(c => c.sourcer_id === sourcer.id)
+                  if (srcCands.length === 0) return null
+                  const counts = STAGE_ORDER.map((stage, i) => {
+                    if (i <= 1) return srcCands.filter(c => STAGE_ORDER.slice(i).includes(c.stage as Stage)).length
+                    return srcCands.filter(c => c.stage === stage).length
+                  })
+                  return (
+                    <tr key={sourcer.id} className="hover:bg-gray-50">
+                      <td className="py-2.5 pr-4 font-medium text-gray-800">{sourcer.name}</td>
+                      {counts.map((count, i) => (
+                        <td key={i} className="py-2.5 pr-4 text-right text-gray-600">{count}</td>
+                      ))}
+                    </tr>
+                  )
+                })}
+                {candidates.filter(c => !c.sourcer_id).length > 0 && (
+                  <tr className="hover:bg-gray-50">
+                    <td className="py-2.5 pr-4 text-gray-400">미지정</td>
+                    {STAGE_ORDER.map((stage, i) => {
+                      const unassigned = candidates.filter(c => !c.sourcer_id)
+                      const count = i <= 1
+                        ? unassigned.filter(c => STAGE_ORDER.slice(i).includes(c.stage as Stage)).length
+                        : unassigned.filter(c => c.stage === stage).length
+                      return <td key={i} className="py-2.5 pr-4 text-right text-gray-400">{count}</td>
+                    })}
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Candidate List */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
@@ -314,6 +384,7 @@ export default function DashboardPage() {
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-100">
                       <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">포지션</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">담당자</th>
                       <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">소싱 플랫폼</th>
                       <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">단계</th>
                       <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">결과</th>
@@ -327,6 +398,9 @@ export default function DashboardPage() {
                       <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 text-sm text-gray-900">
                           {c.position?.name ?? <span className="text-gray-400">-</span>}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {c.sourcer?.name ?? <span className="text-gray-400">-</span>}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
                           {c.sourcing_platform?.name ?? <span className="text-gray-400">-</span>}

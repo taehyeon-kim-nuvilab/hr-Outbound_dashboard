@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
       position_id: c.position_id || null,
       url: c.url || null,
       sourcing_platform_id: c.sourcing_platform_id || null,
+      sourcer_id: c.sourcer_id || null,
       stage: STAGE_ORDER.includes(c.stage) ? c.stage : 'proposal_sent',
       outcome: ['in_progress', 'rejected', 'withdrawn'].includes(c.outcome) ? c.outcome : 'in_progress',
       memo: c.memo || null,
