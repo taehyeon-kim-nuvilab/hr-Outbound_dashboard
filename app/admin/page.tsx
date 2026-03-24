@@ -105,7 +105,7 @@ export default function AdminPage() {
       stage: c.stage,
       outcome: c.outcome,
       memo: c.memo ?? '',
-      proposal_date: c.proposal_date ?? today,
+      proposal_date: c.proposal_date ?? '',
     })
     setUrlWarning(null)
     setFormError(null)
@@ -163,7 +163,7 @@ export default function AdminPage() {
       stage: form.stage,
       outcome: form.outcome,
       memo: form.memo || null,
-      proposal_date: form.proposal_date || today,
+      proposal_date: form.proposal_date || null,
     }
 
     try {

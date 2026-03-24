@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
         sourcing_platform:sourcing_platforms(id, name, created_at),
         sourcer:sourcers(id, name, created_at)
       `)
-      .order('proposal_date', { ascending: false })
+      .order('proposal_date', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: true })
 
     if (positionId) {
       query = query.eq('position_id', positionId)
