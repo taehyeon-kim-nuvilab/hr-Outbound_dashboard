@@ -344,6 +344,7 @@ export default function AdminPage() {
     if (filterSearch) {
       const q = filterSearch.toLowerCase()
       return (c.url?.toLowerCase().includes(q) ?? false)
+        || (c.memo?.toLowerCase().includes(q) ?? false)
     }
     return true
   })
@@ -395,7 +396,7 @@ export default function AdminPage() {
           type="text"
           value={filterSearch}
           onChange={e => setFilterSearch(e.target.value)}
-          placeholder="이름 / URL 검색"
+          placeholder="이름 / URL / 메모 검색"
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[160px]"
         />
         <select
