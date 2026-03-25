@@ -237,12 +237,13 @@ export default function AdminPage() {
       if (lines.length < 2) { setCsvError('데이터가 없습니다.'); return }
 
       const stageMap: Record<string, string> = {
-        '제안 발송': 'proposal_sent', '지원': 'applied',
-        '전화 인터뷰': 'phone_interview', '직무 인터뷰': 'job_interview',
-        '컬처 인터뷰': 'culture_interview', '최종 합격': 'final_accepted', '최종 합류': 'joined',
+        '제안발송': 'proposal_sent', '지원': 'applied',
+        '전화인터뷰': 'phone_interview', '직무인터뷰': 'job_interview',
+        '컬처인터뷰': 'culture_interview', '최종합격': 'final_accepted', '최종합류': 'joined',
       }
+      const normalizeKey = (s: string) => s.replace(/\s/g, '')
       const outcomeMap: Record<string, string> = {
-        '진행 중': 'in_progress', '탈락': 'rejected', '포기': 'withdrawn',
+        '진행중': 'in_progress', '탈락': 'rejected', '포기': 'withdrawn',
       }
 
       const rows = lines.slice(1).map((line, idx) => {
@@ -272,9 +273,9 @@ export default function AdminPage() {
           sourcer_id: sourcer?.id || null,
           sourcer_name: sourcerName,
           ninehire_url: ninehire_url || null,
-          stage: stageMap[stageLabel] || 'proposal_sent',
+          stage: stageMap[normalizeKey(stageLabel)] || 'proposal_sent',
           stage_label: stageLabel,
-          outcome: outcomeMap[outcomeLabel] || 'in_progress',
+          outcome: outcomeMap[normalizeKey(outcomeLabel)] || 'in_progress',
           outcome_label: outcomeLabel,
           memo,
           proposal_date,
