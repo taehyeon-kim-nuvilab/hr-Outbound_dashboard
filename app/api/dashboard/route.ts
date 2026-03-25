@@ -3,6 +3,39 @@ import { supabase } from '@/lib/supabase'
 import { STAGE_ORDER, STAGES } from '@/lib/types'
 import type { Stage } from '@/lib/types'
 
+type CandRow = {
+  id: string
+  stage: string
+  outcome: string
+  position_id: string | null
+  sourcer_id: string | null
+  proposal_date: string | null
+  sourcer: { name: string } | null
+}
+
+const SF_STAGES = STAGE_ORDER.slice(1) // applied → joined (제안발송 제외)
+
+function buildCumulative(cands: CandRow[], stages: Stage[]) {
+  const total = cands.length
+  return stages.map((stage, i) => {
+    const includedStages = stages.slice(i)
+    const count = cands.filter(c => includedStages.includes(c.stage as Stage)).length
+    const percent = total > 0 ? (count / total) * 100 : 0
+    const label = STAGES.find(s => s.value === stage)?.label ?? stage
+    return { stage, label, count, percent: Math.round(percent * 10) / 10 }
+  })
+}
+
+function buildActive(cands: CandRow[], stages: Stage[]) {
+  const active = cands.filter(c => c.outcome === 'in_progress')
+  return stages.map(stage => {
+    const count = active.filter(c => c.stage === stage).length
+    const label = STAGES.find(s => s.value === stage)?.label ?? stage
+    const rejected = cands.filter(c => c.stage === stage && c.outcome !== 'in_progress').length
+    return { stage, label, count, rejected }
+  })
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -13,58 +46,58 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('candidates')
-      .select('id, stage, outcome, position_id, sourcer_id, proposal_date')
+      .select('id, stage, outcome, position_id, sourcer_id, proposal_date, sourcer:sourcers(name)')
 
-    if (positionId) {
-      query = query.eq('position_id', positionId)
-    }
+    if (positionId) query = query.eq('position_id', positionId)
+    if (sourcerId) query = query.eq('sourcer_id', sourcerId)
+    if (startDate) query = query.gte('proposal_date', startDate)
+    if (endDate) query = query.lte('proposal_date', endDate)
 
-    if (sourcerId) {
-      query = query.eq('sourcer_id', sourcerId)
-    }
-
-    if (startDate) {
-      query = query.gte('proposal_date', startDate)
-    }
-
-    if (endDate) {
-      query = query.lte('proposal_date', endDate)
-    }
-
-    const { data: candidates, error } = await query
+    const { data, error } = await query
 
     if (error) {
       console.error('Supabase error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    const total = candidates?.length ?? 0
+    const candidates = (data ?? []) as unknown as CandRow[]
+    const isSearchFirm = (c: CandRow) => c.sourcer?.name?.includes('서치펌') ?? false
 
-    // 누계 퍼널: 모든 단계 누적 (해당 단계 이상에 도달한 전체 인원)
-    const funnelCumulative = STAGE_ORDER.map((stage, i) => {
-      const includedStages = STAGE_ORDER.slice(i) as Stage[]
-      const count = candidates?.filter(c => includedStages.includes(c.stage as Stage)).length ?? 0
-      const percent = total > 0 ? (count / total) * 100 : 0
-      const label = STAGES.find(s => s.value === stage)?.label ?? stage
-      return { stage, label, count, percent: Math.round(percent * 10) / 10 }
+    const outboundCands = candidates.filter(c => !isSearchFirm(c))
+    const sfCands = candidates.filter(c => isSearchFirm(c))
+
+    // 아웃바운드 퍼널
+    const funnelCumulative = buildCumulative(outboundCands, STAGE_ORDER)
+    const funnelActive = buildActive(outboundCands, SF_STAGES)
+    const total = outboundCands.length
+
+    // 서치펌 퍼널 (제안발송 단계 없음)
+    const funnelSFCumulative = buildCumulative(sfCands, SF_STAGES)
+    const funnelSFActive = buildActive(sfCands, SF_STAGES)
+    const sfTotal = sfCands.length
+
+    // 서치펌별 개별 breakdown
+    const sfNames = [...new Set(sfCands.map(c => c.sourcer?.name ?? '기타'))]
+    const sfBreakdown = sfNames.map(name => {
+      const firmCands = sfCands.filter(c => (c.sourcer?.name ?? '기타') === name)
+      return {
+        name,
+        total: firmCands.length,
+        cumulative: buildCumulative(firmCands, SF_STAGES),
+        active: buildActive(firmCands, SF_STAGES),
+      }
     })
 
-    // 진행형 퍼널: 현재 in_progress인 사람만, 각 단계 독립 카운트 (proposal_sent 제외)
-    const activeStages = STAGE_ORDER.slice(1) // applied부터
-    const activeCandidates = candidates?.filter(c => c.outcome === 'in_progress') ?? []
-    const funnelActive = activeStages.map((stage) => {
-      const count = activeCandidates.filter(c => c.stage === stage).length
-      const label = STAGES.find(s => s.value === stage)?.label ?? stage
-      // 해당 단계에 도달한 전체 인원 (탈락 포함) - 탈락 수 계산용
-      const totalAtStage = candidates?.filter(c =>
-        STAGE_ORDER.slice(STAGE_ORDER.indexOf(stage)).includes(c.stage as Stage) ||
-        (c.stage === stage)
-      ).length ?? 0
-      const rejected = (candidates?.filter(c => c.stage === stage && c.outcome !== 'in_progress').length) ?? 0
-      return { stage, label, count, rejected }
+    return NextResponse.json({
+      funnel: funnelCumulative,
+      funnelCumulative,
+      funnelActive,
+      total,
+      funnelSFCumulative,
+      funnelSFActive,
+      sfTotal,
+      sfBreakdown,
     })
-
-    return NextResponse.json({ funnel: funnelCumulative, funnelCumulative, funnelActive, total })
   } catch (err) {
     console.error('Dashboard error:', err)
     return NextResponse.json({ error: '대시보드 데이터 조회 중 오류가 발생했습니다.' }, { status: 500 })
