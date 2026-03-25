@@ -19,6 +19,46 @@ interface CandidateForm {
 
 const today = new Date().toISOString().split('T')[0]
 
+function MultiSelect({ label, options, value, onChange }: {
+  label: string
+  options: { value: string; label: string }[]
+  value: string[]
+  onChange: (v: string[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const toggle = (v: string) =>
+    onChange(value.includes(v) ? value.filter(x => x !== v) : [...value, v])
+  const displayText = value.length === 0 ? `${label} 전체` : `${label} ${value.length}개`
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={`border rounded-lg px-3 py-2 text-sm flex items-center gap-1 whitespace-nowrap ${value.length > 0 ? 'border-blue-500 text-blue-600 bg-blue-50' : 'border-gray-300 text-gray-700'}`}
+      >
+        {displayText} <span className="text-gray-400 text-xs">▾</span>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute z-20 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[160px] py-1 max-h-64 overflow-y-auto">
+            {options.map(opt => (
+              <label key={opt.value} className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={value.includes(opt.value)}
+                  onChange={() => toggle(opt.value)}
+                  className="accent-blue-600"
+                />
+                <span className="text-sm text-gray-700">{opt.label}</span>
+              </label>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 const defaultForm: CandidateForm = {
   position_id: '',
   url: '',
@@ -37,12 +77,12 @@ export default function AdminPage() {
   const [platforms, setPlatforms] = useState<SourcingPlatform[]>([])
   const [sourcers, setSourcers] = useState<Sourcer[]>([])
   const [loading, setLoading] = useState(true)
-  const [filterPosition, setFilterPosition] = useState('')
+  const [filterPosition, setFilterPosition] = useState<string[]>([])
   const [filterSearch, setFilterSearch] = useState('')
-  const [filterSourcer, setFilterSourcer] = useState('')
-  const [filterPlatform, setFilterPlatform] = useState('')
-  const [filterStage, setFilterStage] = useState('')
-  const [filterOutcome, setFilterOutcome] = useState('')
+  const [filterSourcer, setFilterSourcer] = useState<string[]>([])
+  const [filterPlatform, setFilterPlatform] = useState<string[]>([])
+  const [filterStage, setFilterStage] = useState<string[]>([])
+  const [filterOutcome, setFilterOutcome] = useState<string[]>([])
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<CandidateForm>(defaultForm)
@@ -337,11 +377,11 @@ export default function AdminPage() {
   }
 
   const filteredCandidates = candidates.filter(c => {
-    if (filterPosition && c.position_id !== filterPosition) return false
-    if (filterSourcer && c.sourcer_id !== filterSourcer) return false
-    if (filterPlatform && c.sourcing_platform_id !== filterPlatform) return false
-    if (filterStage && c.stage !== filterStage) return false
-    if (filterOutcome && c.outcome !== filterOutcome) return false
+    if (filterPosition.length && !filterPosition.includes(c.position_id ?? '')) return false
+    if (filterSourcer.length && !filterSourcer.includes(c.sourcer_id ?? '')) return false
+    if (filterPlatform.length && !filterPlatform.includes(c.sourcing_platform_id ?? '')) return false
+    if (filterStage.length && !filterStage.includes(c.stage)) return false
+    if (filterOutcome.length && !filterOutcome.includes(c.outcome)) return false
     if (filterSearch) {
       const q = filterSearch.toLowerCase()
       return (c.url?.toLowerCase().includes(q) ?? false)
@@ -349,7 +389,7 @@ export default function AdminPage() {
     }
     return true
   })
-  const isFiltered = !!(filterSearch || filterPosition || filterSourcer || filterPlatform || filterStage || filterOutcome)
+  const isFiltered = !!(filterSearch || filterPosition.length || filterSourcer.length || filterPlatform.length || filterStage.length || filterOutcome.length)
 
   return (
     <div>
@@ -400,49 +440,39 @@ export default function AdminPage() {
           placeholder="이름 / URL / 메모 검색"
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[160px]"
         />
-        <select
+        <MultiSelect
+          label="포지션"
+          options={positions.map(p => ({ value: p.id, label: p.name }))}
           value={filterPosition}
-          onChange={e => setFilterPosition(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">포지션 전체</option>
-          {positions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-        <select
+          onChange={setFilterPosition}
+        />
+        <MultiSelect
+          label="담당자"
+          options={sourcers.map(s => ({ value: s.id, label: s.name }))}
           value={filterSourcer}
-          onChange={e => setFilterSourcer(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">담당자 전체</option>
-          {sourcers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-        <select
+          onChange={setFilterSourcer}
+        />
+        <MultiSelect
+          label="플랫폼"
+          options={platforms.map(p => ({ value: p.id, label: p.name }))}
           value={filterPlatform}
-          onChange={e => setFilterPlatform(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">플랫폼 전체</option>
-          {platforms.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-        <select
+          onChange={setFilterPlatform}
+        />
+        <MultiSelect
+          label="단계"
+          options={STAGES.map(s => ({ value: s.value, label: s.label }))}
           value={filterStage}
-          onChange={e => setFilterStage(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">단계 전체</option>
-          {STAGES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-        </select>
-        <select
+          onChange={setFilterStage}
+        />
+        <MultiSelect
+          label="결과"
+          options={OUTCOMES.map(o => ({ value: o.value, label: o.label }))}
           value={filterOutcome}
-          onChange={e => setFilterOutcome(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">결과 전체</option>
-          {OUTCOMES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-        {(filterSearch || filterPosition || filterSourcer || filterPlatform || filterStage || filterOutcome) && (
+          onChange={setFilterOutcome}
+        />
+        {isFiltered && (
           <button
-            onClick={() => { setFilterSearch(''); setFilterPosition(''); setFilterSourcer(''); setFilterPlatform(''); setFilterStage(''); setFilterOutcome('') }}
+            onClick={() => { setFilterSearch(''); setFilterPosition([]); setFilterSourcer([]); setFilterPlatform([]); setFilterStage([]); setFilterOutcome([]) }}
             className="text-sm text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap"
           >
             초기화
