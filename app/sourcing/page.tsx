@@ -1,0 +1,281 @@
+'use client'
+
+import { useEffect, useState, useCallback } from 'react'
+
+interface Position {
+  id: string
+  name: string
+}
+
+interface SourcingCandidate {
+  id: string
+  platform: string
+  position_id: string | null
+  position: Position | null
+  candidate_id: string
+  candidate_url: string
+  recent_company: string | null
+  signals: string[] | null
+  ai_note: string | null
+  personalization_hooks: string[] | null
+  confidence: string | null
+  status: string
+  message_content: string | null
+  created_at: string
+}
+
+const CONFIDENCE_BADGE: Record<string, string> = {
+  high: 'bg-green-100 text-green-700',
+  medium: 'bg-yellow-100 text-yellow-700',
+  low: 'bg-red-100 text-red-700',
+}
+
+const CONFIDENCE_LABEL: Record<string, string> = {
+  high: '높음',
+  medium: '보통',
+  low: '낮음',
+}
+
+const STATUS_TABS = [
+  { value: 'pending', label: '검토 대기' },
+  { value: 'approved', label: '승인됨' },
+  { value: 'message_sent', label: '발송 완료' },
+  { value: 'rejected', label: '거절됨' },
+]
+
+export default function SourcingPage() {
+  const [candidates, setCandidates] = useState<SourcingCandidate[]>([])
+  const [positions, setPositions] = useState<Position[]>([])
+  const [loading, setLoading] = useState(true)
+  const [statusTab, setStatusTab] = useState('pending')
+  const [positionFilter, setPositionFilter] = useState('')
+  const [platformFilter, setPlatformFilter] = useState('')
+  const [editingMessage, setEditingMessage] = useState<Record<string, string>>({})
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    fetch('/api/positions')
+      .then(r => r.json())
+      .then(data => setPositions(Array.isArray(data) ? data : []))
+      .catch(console.error)
+  }, [])
+
+  const fetchCandidates = useCallback(async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({ status: statusTab })
+      if (positionFilter) params.set('position_id', positionFilter)
+      if (platformFilter) params.set('platform', platformFilter)
+
+      const res = await fetch(`/api/sourcing-queue?${params}`)
+      const data = await res.json()
+      setCandidates(Array.isArray(data) ? data : [])
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [statusTab, positionFilter, platformFilter])
+
+  useEffect(() => { fetchCandidates() }, [fetchCandidates])
+
+  const handleAction = async (id: string, status: 'approved' | 'rejected') => {
+    setActionLoading(prev => ({ ...prev, [id]: true }))
+    try {
+      const message = editingMessage[id]
+      await fetch('/api/sourcing-queue', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status, message_content: message }),
+      })
+      await fetchCandidates()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setActionLoading(prev => ({ ...prev, [id]: false }))
+    }
+  }
+
+  const pendingCount = candidates.length
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">AI 소싱 검토</h1>
+        <p className="text-gray-500 text-sm mt-1">AI가 수집한 후보자를 검토하고 메시지 발송을 승인하세요</p>
+      </div>
+
+      {/* 상태 탭 */}
+      <div className="flex gap-2 mb-6">
+        {STATUS_TABS.map(tab => (
+          <button
+            key={tab.value}
+            onClick={() => setStatusTab(tab.value)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              statusTab === tab.value
+                ? 'bg-violet-600 text-white'
+                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            {tab.label}
+            {tab.value === statusTab && !loading && (
+              <span className="ml-2 bg-white bg-opacity-20 text-white text-xs px-1.5 py-0.5 rounded-full">
+                {pendingCount}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* 필터 */}
+      <div className="flex gap-3 mb-6">
+        <select
+          value={positionFilter}
+          onChange={e => setPositionFilter(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white"
+        >
+          <option value="">전체 포지션</option>
+          {positions.map(p => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+        <select
+          value={platformFilter}
+          onChange={e => setPlatformFilter(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white"
+        >
+          <option value="">전체 플랫폼</option>
+          <option value="wanted">원티드</option>
+          <option value="remember">리멤버</option>
+        </select>
+      </div>
+
+      {/* 후보 목록 */}
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-gray-400 text-sm">불러오는 중...</div>
+      ) : candidates.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+          <p className="text-sm">검토할 후보자가 없습니다</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {candidates.map(c => (
+            <div key={c.id} className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+              {/* 헤더 */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                    c.platform === 'wanted' ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700'
+                  }`}>
+                    {c.platform === 'wanted' ? '원티드' : '리멤버'}
+                  </span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {c.position?.name ?? '포지션 미지정'}
+                  </span>
+                  {c.recent_company && (
+                    <span className="text-sm text-gray-500">· {c.recent_company}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {c.confidence && (
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${CONFIDENCE_BADGE[c.confidence] ?? 'bg-gray-100 text-gray-600'}`}>
+                      신뢰도 {CONFIDENCE_LABEL[c.confidence] ?? c.confidence}
+                    </span>
+                  )}
+                  <a
+                    href={c.candidate_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-violet-600 hover:underline"
+                  >
+                    프로필 보기 →
+                  </a>
+                </div>
+              </div>
+
+              {/* AI 판단 근거 */}
+              {c.ai_note && (
+                <div className="mb-3 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1 font-medium">AI 판단 근거</p>
+                  <p className="text-sm text-gray-700">{c.ai_note}</p>
+                </div>
+              )}
+
+              {/* 시그널 */}
+              {c.signals && c.signals.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  {c.signals.map(s => (
+                    <span key={s} className="px-2 py-0.5 bg-violet-50 text-violet-700 rounded text-xs font-mono">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* 개인화 소재 */}
+              {c.personalization_hooks && c.personalization_hooks.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs text-gray-500 mb-1.5 font-medium">메시지 개인화 소재</p>
+                  <ul className="space-y-1">
+                    {c.personalization_hooks.map((hook, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                        <span className="text-violet-400 mt-0.5">•</span>
+                        {hook}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* 메시지 편집 (pending일 때만) */}
+              {statusTab === 'pending' && (
+                <div className="mb-4">
+                  <p className="text-xs text-gray-500 mb-1.5 font-medium">발송 메시지 (승인 전 수정 가능)</p>
+                  <textarea
+                    rows={4}
+                    value={editingMessage[c.id] ?? c.message_content ?? ''}
+                    onChange={e => setEditingMessage(prev => ({ ...prev, [c.id]: e.target.value }))}
+                    placeholder="메시지를 입력하거나 수정하세요..."
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+                  />
+                </div>
+              )}
+
+              {/* 발송된 메시지 표시 */}
+              {statusTab !== 'pending' && c.message_content && (
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1 font-medium">발송 메시지</p>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{c.message_content}</p>
+                </div>
+              )}
+
+              {/* 액션 버튼 */}
+              {statusTab === 'pending' && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleAction(c.id, 'approved')}
+                    disabled={actionLoading[c.id]}
+                    className="px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 disabled:opacity-50 transition-colors"
+                  >
+                    {actionLoading[c.id] ? '처리 중...' : '승인 · 발송 대기'}
+                  </button>
+                  <button
+                    onClick={() => handleAction(c.id, 'rejected')}
+                    disabled={actionLoading[c.id]}
+                    className="px-4 py-2 bg-white text-gray-600 text-sm font-medium rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                  >
+                    거절
+                  </button>
+                </div>
+              )}
+
+              <p className="text-xs text-gray-400 mt-3">
+                수집일: {new Date(c.created_at).toLocaleDateString('ko-KR')}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
