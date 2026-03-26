@@ -391,12 +391,23 @@ export default function DashboardPage() {
                     <tbody className="divide-y divide-gray-50">
                       {funnelCumulative.slice(1).map((item, idx) => {
                         const prev = funnelCumulative[idx]
-                        const prevNoSkip = prev.countNoSkip ?? prev.count
-                        const itemNoSkip = item.countNoSkip ?? item.count
-                        const rate = prevNoSkip > 0 ? (itemNoSkip / prevNoSkip) * 100 : 0
+                        const isAppliedToPhone = prev.stage === 'applied' && item.stage === 'phone_interview'
+                        const isPhoneToJob = prev.stage === 'phone_interview' && item.stage === 'job_interview'
+                        let numerator = item.count
+                        let denominator = prev.count
+                        let prevLabel = `${prev.count}명`
+                        let itemLabel = `${item.count}명`
+                        if (isAppliedToPhone) {
+                          const ns = prev.countNoSkip ?? prev.count
+                          denominator = ns
+                          if (ns !== prev.count) prevLabel = `${prev.count}명 (${ns}명)`
+                        } else if (isPhoneToJob) {
+                          const ns = item.countNoSkip ?? item.count
+                          numerator = ns
+                          if (ns !== item.count) itemLabel = `${item.count}명 (${ns}명)`
+                        }
+                        const rate = denominator > 0 ? (numerator / denominator) * 100 : 0
                         const rateColor = rate >= 50 ? 'text-green-600' : rate >= 25 ? 'text-amber-600' : 'text-red-500'
-                        const prevLabel = prevNoSkip !== prev.count ? `${prev.count}명 (${prevNoSkip}명)` : `${prev.count}명`
-                        const itemLabel = itemNoSkip !== item.count ? `${item.count}명 (${itemNoSkip}명)` : `${item.count}명`
                         return (
                           <tr key={item.stage} className="hover:bg-gray-50">
                             <td className="py-2.5 pr-4 text-gray-500 whitespace-nowrap">{prev.label}</td>
@@ -566,12 +577,23 @@ export default function DashboardPage() {
                         <tbody className="divide-y divide-gray-50">
                           {funnelSFCumulative.slice(1).map((item, idx) => {
                             const prev = funnelSFCumulative[idx]
-                            const prevNoSkip = prev.countNoSkip ?? prev.count
-                            const itemNoSkip = item.countNoSkip ?? item.count
-                            const rate = prevNoSkip > 0 ? (itemNoSkip / prevNoSkip) * 100 : 0
+                            const isAppliedToPhone = prev.stage === 'applied' && item.stage === 'phone_interview'
+                            const isPhoneToJob = prev.stage === 'phone_interview' && item.stage === 'job_interview'
+                            let numerator = item.count
+                            let denominator = prev.count
+                            let prevLabel = `${prev.count}명`
+                            let itemLabel = `${item.count}명`
+                            if (isAppliedToPhone) {
+                              const ns = prev.countNoSkip ?? prev.count
+                              denominator = ns
+                              if (ns !== prev.count) prevLabel = `${prev.count}명 (${ns}명)`
+                            } else if (isPhoneToJob) {
+                              const ns = item.countNoSkip ?? item.count
+                              numerator = ns
+                              if (ns !== item.count) itemLabel = `${item.count}명 (${ns}명)`
+                            }
+                            const rate = denominator > 0 ? (numerator / denominator) * 100 : 0
                             const rateColor = rate >= 50 ? 'text-green-600' : rate >= 25 ? 'text-amber-600' : 'text-red-500'
-                            const prevLabel = prevNoSkip !== prev.count ? `${prev.count}명 (${prevNoSkip}명)` : `${prev.count}명`
-                            const itemLabel = itemNoSkip !== item.count ? `${item.count}명 (${itemNoSkip}명)` : `${item.count}명`
                             return (
                               <tr key={item.stage} className="hover:bg-gray-50">
                                 <td className="py-2.5 pr-4 text-gray-500 whitespace-nowrap">{prev.label}</td>
