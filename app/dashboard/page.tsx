@@ -391,7 +391,9 @@ export default function DashboardPage() {
                     <tbody className="divide-y divide-gray-50">
                       {funnelCumulative.slice(1).map((item, idx) => {
                         const prev = funnelCumulative[idx]
-                        const rate = prev.count > 0 ? (item.count / prev.count) * 100 : 0
+                        const prevCount = prev.countNoSkip ?? prev.count
+                        const itemCount = item.countNoSkip ?? item.count
+                        const rate = prevCount > 0 ? (itemCount / prevCount) * 100 : 0
                         const rateColor = rate >= 50 ? 'text-green-600' : rate >= 25 ? 'text-amber-600' : 'text-red-500'
                         return (
                           <tr key={item.stage} className="hover:bg-gray-50">
@@ -562,7 +564,9 @@ export default function DashboardPage() {
                         <tbody className="divide-y divide-gray-50">
                           {funnelSFCumulative.slice(1).map((item, idx) => {
                             const prev = funnelSFCumulative[idx]
-                            const rate = prev.count > 0 ? (item.count / prev.count) * 100 : 0
+                            const prevCount = prev.countNoSkip ?? prev.count
+                            const itemCount = item.countNoSkip ?? item.count
+                            const rate = prevCount > 0 ? (itemCount / prevCount) * 100 : 0
                             const rateColor = rate >= 50 ? 'text-green-600' : rate >= 25 ? 'text-amber-600' : 'text-red-500'
                             return (
                               <tr key={item.stage} className="hover:bg-gray-50">

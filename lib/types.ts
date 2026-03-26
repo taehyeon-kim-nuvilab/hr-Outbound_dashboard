@@ -50,6 +50,7 @@ export interface FunnelStats {
   stage: Stage
   label: string
   count: number
+  countNoSkip?: number
   percent: number
 }
 
