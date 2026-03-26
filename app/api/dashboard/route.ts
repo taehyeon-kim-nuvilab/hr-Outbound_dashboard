@@ -44,7 +44,7 @@ function buildActive(cands: CandRow[], stages: Stage[]) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const positionId = searchParams.get('position_id')
+    const positionIds = searchParams.getAll('position_id')
     const sourcerId = searchParams.get('sourcer_id')
     const startDate = searchParams.get('start_date')
     const endDate = searchParams.get('end_date')
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       .from('candidates')
       .select('id, stage, outcome, position_id, sourcer_id, proposal_date, sourcer:sourcers(name)')
 
-    if (positionId) query = query.eq('position_id', positionId)
+    if (positionIds.length > 0) query = query.in('position_id', positionIds)
     if (sourcerId) query = query.eq('sourcer_id', sourcerId)
     if (startDate) query = query.gte('proposal_date', startDate)
     if (endDate) query = query.lte('proposal_date', endDate)

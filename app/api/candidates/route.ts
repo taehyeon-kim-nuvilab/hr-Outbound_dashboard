@@ -5,7 +5,7 @@ import { STAGE_ORDER } from '@/lib/types'
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const positionId = searchParams.get('position_id')
+    const positionIds = searchParams.getAll('position_id')
     const sourcerId = searchParams.get('sourcer_id')
     const stage = searchParams.get('stage')
     const startDate = searchParams.get('start_date')
@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
       .order('proposal_date', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: true })
 
-    if (positionId) {
-      query = query.eq('position_id', positionId)
+    if (positionIds.length > 0) {
+      query = query.in('position_id', positionIds)
     }
 
     if (sourcerId) {

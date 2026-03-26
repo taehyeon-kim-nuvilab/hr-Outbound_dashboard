@@ -1,8 +1,56 @@
 'use client'
 
-import { useEffect, useState, useCallback, Dispatch, SetStateAction } from 'react'
+import { useEffect, useState, useCallback, Dispatch, SetStateAction, useRef } from 'react'
 import { STAGES, OUTCOMES, STAGE_ORDER } from '@/lib/types'
 import type { Candidate, Position, Sourcer, FunnelStats, Stage } from '@/lib/types'
+
+function MultiSelect({ label, options, value, onChange }: {
+  label: string
+  options: { value: string; label: string }[]
+  value: string[]
+  onChange: (v: string[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const toggle = (v: string) =>
+    onChange(value.includes(v) ? value.filter(x => x !== v) : [...value, v])
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+  const display = value.length === 0 ? '전체' : value.length === 1
+    ? (options.find(o => o.value === value[0])?.label ?? value[0])
+    : `${value.length}개 선택`
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white flex items-center gap-2 min-w-[120px]"
+      >
+        <span className="flex-1 text-left truncate">{display}</span>
+        <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute top-full mt-1 left-0 z-50 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[180px] max-h-64 overflow-y-auto">
+          <label className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100">
+            <input type="checkbox" checked={value.length === 0} onChange={() => onChange([])} className="rounded" />
+            <span className="text-sm text-gray-700">전체</span>
+          </label>
+          {options.map(opt => (
+            <label key={opt.value} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+              <input type="checkbox" checked={value.includes(opt.value)} onChange={() => toggle(opt.value)} className="rounded" />
+              <span className="text-sm text-gray-700 truncate">{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface ActiveFunnelItem {
   stage: string
@@ -30,7 +78,7 @@ export default function DashboardPage() {
   const [sfTotal, setSfTotal] = useState(0)
   const [sfBreakdown, setSfBreakdown] = useState<SFBreakdown[]>([])
   const [activeTab, setActiveTab] = useState<'outbound' | 'searchfirm'>('outbound')
-  const [selectedPosition, setSelectedPosition] = useState('')
+  const [selectedPositions, setSelectedPositions] = useState<string[]>([])
   const [selectedStage, setSelectedStage] = useState('')
   const [selectedSourcer, setSelectedSourcer] = useState('')
   const [startDate, setStartDate] = useState('')
@@ -39,7 +87,6 @@ export default function DashboardPage() {
   const [showCount, setShowCount] = useState(10)
   const [showSFCount, setShowSFCount] = useState(10)
   const [loading, setLoading] = useState(true)
-  const [sfPositionFilter, setSfPositionFilter] = useState('')
   const [sfFirmFilter, setSfFirmFilter] = useState('')
 
   useEffect(() => {
@@ -57,7 +104,7 @@ export default function DashboardPage() {
     setLoading(true)
     try {
       const params = new URLSearchParams()
-      if (selectedPosition) params.set('position_id', selectedPosition)
+      selectedPositions.forEach(id => params.append('position_id', id))
       if (selectedStage) params.set('stage', selectedStage)
       if (selectedSourcer) params.set('sourcer_id', selectedSourcer)
       if (startDate) params.set('start_date', startDate)
@@ -73,33 +120,19 @@ export default function DashboardPage() {
       setFunnelCumulative(dashData.funnelCumulative || dashData.funnel || [])
       setFunnelActive(dashData.funnelActive || [])
       setTotal(dashData.total || 0)
+      setFunnelSFCumulative(dashData.funnelSFCumulative || [])
+      setFunnelSFActive(dashData.funnelSFActive || [])
+      setSfTotal(dashData.sfTotal || 0)
+      setSfBreakdown(dashData.sfBreakdown || [])
       setCandidates(Array.isArray(candData) ? candData : [])
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }, [selectedPosition, selectedStage, selectedSourcer, startDate, endDate])
-
-  const fetchSFData = useCallback(async () => {
-    try {
-      const params = new URLSearchParams()
-      if (sfPositionFilter) params.set('position_id', sfPositionFilter)
-      if (startDate) params.set('start_date', startDate)
-      if (endDate) params.set('end_date', endDate)
-      const res = await fetch(`/api/dashboard?${params}`)
-      const dashData = await res.json()
-      setFunnelSFCumulative(dashData.funnelSFCumulative || [])
-      setFunnelSFActive(dashData.funnelSFActive || [])
-      setSfTotal(dashData.sfTotal || 0)
-      setSfBreakdown(dashData.sfBreakdown || [])
-    } catch (err) {
-      console.error(err)
-    }
-  }, [sfPositionFilter, startDate, endDate])
+  }, [selectedPositions, selectedStage, selectedSourcer, startDate, endDate])
 
   useEffect(() => { fetchData() }, [fetchData])
-  useEffect(() => { fetchSFData() }, [fetchSFData])
 
   const getStageLabel = (value: string) =>
     STAGES.find(s => s.value === value)?.label ?? value
@@ -244,6 +277,7 @@ export default function DashboardPage() {
   }
 
   const selectedFirmData = sfFirmFilter ? sfBreakdown.find(b => b.name === sfFirmFilter) : null
+
   const displaySFCumulative = selectedFirmData?.cumulative ?? funnelSFCumulative
   const displaySFActive = selectedFirmData?.active ?? funnelSFActive
   const displaySFTotal = selectedFirmData?.total ?? sfTotal
@@ -256,7 +290,6 @@ export default function DashboardPage() {
     setListStageFilter('')
     setShowCount(10)
     setShowSFCount(10)
-    setSfPositionFilter('')
     setSfFirmFilter('')
   }
 
@@ -272,16 +305,12 @@ export default function DashboardPage() {
       <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6 flex flex-wrap gap-4 items-center">
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-gray-700 whitespace-nowrap">포지션</label>
-          <select
-            value={selectedPosition}
-            onChange={e => setSelectedPosition(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">전체</option>
-            {positions.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
+          <MultiSelect
+            label="포지션"
+            options={positions.map(p => ({ value: p.id, label: p.name }))}
+            value={selectedPositions}
+            onChange={setSelectedPositions}
+          />
         </div>
         {activeTab === 'outbound' && (
           <>
@@ -313,6 +342,21 @@ export default function DashboardPage() {
             </div>
           </>
         )}
+        {activeTab === 'searchfirm' && (
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">서치펌</label>
+            <select
+              value={sfFirmFilter}
+              onChange={e => setSfFirmFilter(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">전체</option>
+              {sfBreakdown.map(b => (
+                <option key={b.name} value={b.name}>{b.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-gray-700 whitespace-nowrap">기간</label>
           <input
@@ -329,9 +373,9 @@ export default function DashboardPage() {
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
-        {(selectedPosition || selectedStage || selectedSourcer || startDate || endDate) && (
+        {(selectedPositions.length > 0 || selectedStage || selectedSourcer || sfFirmFilter || startDate || endDate) && (
           <button
-            onClick={() => { setSelectedPosition(''); setSelectedStage(''); setSelectedSourcer(''); setStartDate(''); setEndDate('') }}
+            onClick={() => { setSelectedPositions([]); setSelectedStage(''); setSelectedSourcer(''); setSfFirmFilter(''); setStartDate(''); setEndDate('') }}
             className="text-sm text-blue-600 hover:text-blue-800 font-medium"
           >
             필터 초기화
@@ -555,44 +599,6 @@ export default function DashboardPage() {
       ) : (
         /* 서치펌 탭 */
         <>
-          {/* 서치펌 필터 */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 flex flex-wrap gap-4 items-center">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">서치펌</label>
-              <select
-                value={sfFirmFilter}
-                onChange={e => setSfFirmFilter(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-              >
-                <option value="">전체</option>
-                {sfBreakdown.map(b => (
-                  <option key={b.name} value={b.name}>{b.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">포지션</label>
-              <select
-                value={sfPositionFilter}
-                onChange={e => setSfPositionFilter(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-              >
-                <option value="">전체</option>
-                {positions.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-            {(sfFirmFilter || sfPositionFilter) && (
-              <button
-                onClick={() => { setSfFirmFilter(''); setSfPositionFilter('') }}
-                className="text-sm text-violet-600 hover:text-violet-800 font-medium"
-              >
-                필터 초기화
-              </button>
-            )}
-          </div>
-
           {/* 서치펌 전체 퍼널 (누계) */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
             <div className="flex items-center gap-2 mb-1">
