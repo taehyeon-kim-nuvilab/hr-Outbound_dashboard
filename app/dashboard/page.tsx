@@ -605,7 +605,6 @@ export default function DashboardPage() {
               <h2 className="text-lg font-semibold text-gray-900">서치펌 퍼널 (누계)</h2>
               <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
                 {sfFirmFilter ? sfFirmFilter : '전체 서치펌 합산'}
-                {sfPositionFilter && ` · ${positions.find(p => p.id === sfPositionFilter)?.name ?? ''}`}
               </span>
             </div>
             <p className="text-xs text-gray-400 mb-5">해당 단계 이상에 도달한 누적 인원 기준</p>
