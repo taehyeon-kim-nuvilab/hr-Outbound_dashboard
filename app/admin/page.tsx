@@ -355,6 +355,29 @@ export default function AdminPage() {
     }
   }
 
+  const downloadCsv = () => {
+    const header = '번호,포지션,URL,소싱플랫폼,담당자,단계,결과,메모,제안발송날짜,나인하이어URL'
+    const rows = filteredCandidates.map((c, i) => [
+      i + 1,
+      c.position?.name ?? '',
+      c.url ?? '',
+      c.sourcing_platform?.name ?? '',
+      c.sourcer?.name ?? '',
+      getStageLabel(c.stage),
+      getOutcomeLabel(c.outcome),
+      (c.memo ?? '').replace(/,/g, ' '),
+      c.proposal_date ?? '',
+      c.ninehire_url ?? '',
+    ].join(','))
+    const blob = new Blob(['\uFEFF' + header + '\n' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `candidates_${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const downloadTemplate = () => {
     const header = '번호,포지션,URL,소싱플랫폼,담당자,단계,결과,메모,제안발송날짜,나인하이어URL'
     const example = `1,Recruiting Manager,https://linkedin.com/in/example,LinkedIn,김태현,제안 발송,진행 중,,${today},`
@@ -410,6 +433,15 @@ export default function AdminPage() {
             </svg>
             설정
           </Link>
+          <button
+            onClick={downloadCsv}
+            className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 11l3 3m0 0l3-3m-3 3V4" />
+            </svg>
+            CSV 다운로드
+          </button>
           <button
             onClick={() => { setCsvPreview([]); setCsvError(null); setShowCsvModal(true) }}
             className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
