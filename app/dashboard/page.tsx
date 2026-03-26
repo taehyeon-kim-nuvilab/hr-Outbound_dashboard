@@ -391,18 +391,20 @@ export default function DashboardPage() {
                     <tbody className="divide-y divide-gray-50">
                       {funnelCumulative.slice(1).map((item, idx) => {
                         const prev = funnelCumulative[idx]
-                        const prevCount = prev.countNoSkip ?? prev.count
-                        const itemCount = item.countNoSkip ?? item.count
-                        const rate = prevCount > 0 ? (itemCount / prevCount) * 100 : 0
+                        const prevNoSkip = prev.countNoSkip ?? prev.count
+                        const itemNoSkip = item.countNoSkip ?? item.count
+                        const rate = prevNoSkip > 0 ? (itemNoSkip / prevNoSkip) * 100 : 0
                         const rateColor = rate >= 50 ? 'text-green-600' : rate >= 25 ? 'text-amber-600' : 'text-red-500'
+                        const prevLabel = prevNoSkip !== prev.count ? `${prev.count}명 (${prevNoSkip}명)` : `${prev.count}명`
+                        const itemLabel = itemNoSkip !== item.count ? `${item.count}명 (${itemNoSkip}명)` : `${item.count}명`
                         return (
                           <tr key={item.stage} className="hover:bg-gray-50">
                             <td className="py-2.5 pr-4 text-gray-500 whitespace-nowrap">{prev.label}</td>
                             <td className="py-2.5 pr-4 text-gray-700 font-medium whitespace-nowrap">
                               <span className="flex items-center gap-1"><span className="text-gray-300">→</span>{item.label}</span>
                             </td>
-                            <td className="py-2.5 pr-4 text-right text-gray-500">{prev.count}명</td>
-                            <td className="py-2.5 pr-4 text-right text-gray-700 font-medium">{item.count}명</td>
+                            <td className="py-2.5 pr-4 text-right text-gray-500 whitespace-nowrap">{prevLabel}</td>
+                            <td className="py-2.5 pr-4 text-right text-gray-700 font-medium whitespace-nowrap">{itemLabel}</td>
                             <td className="py-2.5 text-right">
                               <span className={`font-bold ${rateColor}`}>{rate.toFixed(1)}%</span>
                             </td>
@@ -564,18 +566,20 @@ export default function DashboardPage() {
                         <tbody className="divide-y divide-gray-50">
                           {funnelSFCumulative.slice(1).map((item, idx) => {
                             const prev = funnelSFCumulative[idx]
-                            const prevCount = prev.countNoSkip ?? prev.count
-                            const itemCount = item.countNoSkip ?? item.count
-                            const rate = prevCount > 0 ? (itemCount / prevCount) * 100 : 0
+                            const prevNoSkip = prev.countNoSkip ?? prev.count
+                            const itemNoSkip = item.countNoSkip ?? item.count
+                            const rate = prevNoSkip > 0 ? (itemNoSkip / prevNoSkip) * 100 : 0
                             const rateColor = rate >= 50 ? 'text-green-600' : rate >= 25 ? 'text-amber-600' : 'text-red-500'
+                            const prevLabel = prevNoSkip !== prev.count ? `${prev.count}명 (${prevNoSkip}명)` : `${prev.count}명`
+                            const itemLabel = itemNoSkip !== item.count ? `${item.count}명 (${itemNoSkip}명)` : `${item.count}명`
                             return (
                               <tr key={item.stage} className="hover:bg-gray-50">
                                 <td className="py-2.5 pr-4 text-gray-500 whitespace-nowrap">{prev.label}</td>
                                 <td className="py-2.5 pr-4 text-gray-700 font-medium whitespace-nowrap">
                                   <span className="flex items-center gap-1"><span className="text-gray-300">→</span>{item.label}</span>
                                 </td>
-                                <td className="py-2.5 pr-4 text-right text-gray-500">{prev.count}명</td>
-                                <td className="py-2.5 pr-4 text-right text-gray-700 font-medium">{item.count}명</td>
+                                <td className="py-2.5 pr-4 text-right text-gray-500 whitespace-nowrap">{prevLabel}</td>
+                                <td className="py-2.5 pr-4 text-right text-gray-700 font-medium whitespace-nowrap">{itemLabel}</td>
                                 <td className="py-2.5 text-right">
                                   <span className={`font-bold ${rateColor}`}>{rate.toFixed(1)}%</span>
                                 </td>
