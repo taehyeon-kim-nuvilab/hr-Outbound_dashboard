@@ -37,6 +37,11 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'id, status 필수' }, { status: 400 })
     }
 
+    const VALID_STATUSES = ['pending', 'approved', 'rejected', 'sending', 'message_sent']
+    if (!VALID_STATUSES.includes(status)) {
+      return NextResponse.json({ error: '유효하지 않은 status 값' }, { status: 400 })
+    }
+
     const updateData: Record<string, unknown> = {
       status,
       reviewed_at: new Date().toISOString(),
