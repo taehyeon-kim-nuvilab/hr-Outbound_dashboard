@@ -39,6 +39,8 @@ export default function DashboardPage() {
   const [showCount, setShowCount] = useState(10)
   const [showSFCount, setShowSFCount] = useState(10)
   const [loading, setLoading] = useState(true)
+  const [sfPositionFilter, setSfPositionFilter] = useState('')
+  const [sfFirmFilter, setSfFirmFilter] = useState('')
 
   useEffect(() => {
     fetch('/api/positions')
@@ -71,10 +73,6 @@ export default function DashboardPage() {
       setFunnelCumulative(dashData.funnelCumulative || dashData.funnel || [])
       setFunnelActive(dashData.funnelActive || [])
       setTotal(dashData.total || 0)
-      setFunnelSFCumulative(dashData.funnelSFCumulative || [])
-      setFunnelSFActive(dashData.funnelSFActive || [])
-      setSfTotal(dashData.sfTotal || 0)
-      setSfBreakdown(dashData.sfBreakdown || [])
       setCandidates(Array.isArray(candData) ? candData : [])
     } catch (err) {
       console.error(err)
@@ -83,9 +81,25 @@ export default function DashboardPage() {
     }
   }, [selectedPosition, selectedStage, selectedSourcer, startDate, endDate])
 
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
+  const fetchSFData = useCallback(async () => {
+    try {
+      const params = new URLSearchParams()
+      if (sfPositionFilter) params.set('position_id', sfPositionFilter)
+      if (startDate) params.set('start_date', startDate)
+      if (endDate) params.set('end_date', endDate)
+      const res = await fetch(`/api/dashboard?${params}`)
+      const dashData = await res.json()
+      setFunnelSFCumulative(dashData.funnelSFCumulative || [])
+      setFunnelSFActive(dashData.funnelSFActive || [])
+      setSfTotal(dashData.sfTotal || 0)
+      setSfBreakdown(dashData.sfBreakdown || [])
+    } catch (err) {
+      console.error(err)
+    }
+  }, [sfPositionFilter, startDate, endDate])
+
+  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => { fetchSFData() }, [fetchSFData])
 
   const getStageLabel = (value: string) =>
     STAGES.find(s => s.value === value)?.label ?? value
@@ -229,6 +243,12 @@ export default function DashboardPage() {
     )
   }
 
+  const selectedFirmData = sfFirmFilter ? sfBreakdown.find(b => b.name === sfFirmFilter) : null
+  const displaySFCumulative = selectedFirmData?.cumulative ?? funnelSFCumulative
+  const displaySFActive = selectedFirmData?.active ?? funnelSFActive
+  const displaySFTotal = selectedFirmData?.total ?? sfTotal
+  const displaySFBreakdown = sfFirmFilter ? sfBreakdown.filter(b => b.name === sfFirmFilter) : sfBreakdown
+
   const switchTab = (tab: 'outbound' | 'searchfirm') => {
     setActiveTab(tab)
     setSelectedSourcer('')
@@ -236,6 +256,8 @@ export default function DashboardPage() {
     setListStageFilter('')
     setShowCount(10)
     setShowSFCount(10)
+    setSfPositionFilter('')
+    setSfFirmFilter('')
   }
 
   return (
@@ -533,22 +555,63 @@ export default function DashboardPage() {
       ) : (
         /* 서치펌 탭 */
         <>
+          {/* 서치펌 필터 */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 flex flex-wrap gap-4 items-center">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">서치펌</label>
+              <select
+                value={sfFirmFilter}
+                onChange={e => setSfFirmFilter(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+              >
+                <option value="">전체</option>
+                {sfBreakdown.map(b => (
+                  <option key={b.name} value={b.name}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">포지션</label>
+              <select
+                value={sfPositionFilter}
+                onChange={e => setSfPositionFilter(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+              >
+                <option value="">전체</option>
+                {positions.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            {(sfFirmFilter || sfPositionFilter) && (
+              <button
+                onClick={() => { setSfFirmFilter(''); setSfPositionFilter('') }}
+                className="text-sm text-violet-600 hover:text-violet-800 font-medium"
+              >
+                필터 초기화
+              </button>
+            )}
+          </div>
+
           {/* 서치펌 전체 퍼널 (누계) */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
             <div className="flex items-center gap-2 mb-1">
               <h2 className="text-lg font-semibold text-gray-900">서치펌 퍼널 (누계)</h2>
-              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">전체 서치펌 합산</span>
+              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                {sfFirmFilter ? sfFirmFilter : '전체 서치펌 합산'}
+                {sfPositionFilter && ` · ${positions.find(p => p.id === sfPositionFilter)?.name ?? ''}`}
+              </span>
             </div>
             <p className="text-xs text-gray-400 mb-5">해당 단계 이상에 도달한 누적 인원 기준</p>
 
-            {sfTotal === 0 ? (
+            {displaySFTotal === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-gray-400">
                 <p className="text-sm">등록된 서치펌 후보자가 없습니다</p>
               </div>
             ) : (
               <>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-                  {funnelSFCumulative.map((item, idx) => (
+                  {displaySFCumulative.map((item, idx) => (
                     <div
                       key={item.stage}
                       className={`bg-gradient-to-b ${sfCumulativeColors[idx]} rounded-xl p-4 flex flex-col items-center justify-center text-center shadow-sm`}
@@ -560,7 +623,7 @@ export default function DashboardPage() {
                   ))}
                 </div>
 
-                {funnelSFCumulative.length > 1 && (
+                {displaySFCumulative.length > 1 && (
                   <div className="pt-4 border-t border-gray-100">
                     <p className="text-sm font-semibold text-gray-700 mb-3">단계별 전환 분석</p>
                     <div className="overflow-x-auto">
@@ -575,8 +638,8 @@ export default function DashboardPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                          {funnelSFCumulative.slice(1).map((item, idx) => {
-                            const prev = funnelSFCumulative[idx]
+                          {displaySFCumulative.slice(1).map((item, idx) => {
+                            const prev = displaySFCumulative[idx]
                             const isAppliedToPhone = prev.stage === 'applied' && item.stage === 'phone_interview'
                             const isPhoneToJob = prev.stage === 'phone_interview' && item.stage === 'job_interview'
                             let numerator = item.count
@@ -625,13 +688,13 @@ export default function DashboardPage() {
             </div>
             <p className="text-xs text-gray-400 mb-5">전체 서치펌 합산, outcome이 &apos;진행 중&apos;인 사람만 집계</p>
 
-            {funnelSFActive.every(f => f.count === 0) ? (
+            {displaySFActive.every(f => f.count === 0) ? (
               <div className="flex flex-col items-center justify-center py-10 text-gray-400">
                 <p className="text-sm">현재 진행 중인 서치펌 후보자가 없습니다</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                {funnelSFActive.map((item, idx) => (
+                {displaySFActive.map((item, idx) => (
                   <div
                     key={item.stage}
                     className={`bg-gradient-to-b ${sfActiveColors[idx]} rounded-xl p-4 flex flex-col items-center justify-center text-center shadow-sm`}
@@ -645,11 +708,11 @@ export default function DashboardPage() {
           </div>
 
           {/* 서치펌별 비교 */}
-          {sfBreakdown.length > 0 && (
+          {displaySFBreakdown.length > 0 && !sfFirmFilter && (
             <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-5">서치펌별 비교</h2>
-              <div className={`grid gap-6 ${sfBreakdown.length >= 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
-                {sfBreakdown.map((firm, firmIdx) => (
+              <div className={`grid gap-6 ${displaySFBreakdown.length >= 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+                {displaySFBreakdown.map((firm, firmIdx) => (
                   <div key={firm.name} className="border border-gray-200 rounded-xl overflow-hidden">
                     <div className={`px-4 py-3 text-white font-semibold text-sm ${sfBreakdownHeaders[firmIdx % sfBreakdownHeaders.length]}`}>
                       {firm.name}
