@@ -15,11 +15,16 @@ type CandRow = {
 
 const SF_STAGES = STAGE_ORDER.slice(1) // applied → joined (제안발송 제외)
 
-function buildCumulative(cands: CandRow[], stages: Stage[]) {
+function buildCumulative(cands: CandRow[], stages: Stage[], skipPhoneIds: Set<string>) {
   const total = cands.length
   return stages.map((stage, i) => {
     const includedStages = stages.slice(i)
-    const count = cands.filter(c => includedStages.includes(c.stage as Stage)).length
+    let eligible = cands
+    // 전화 인터뷰를 건너뛰는 포지션은 phone_interview 단계 카운트에서 제외
+    if (stage === 'phone_interview') {
+      eligible = cands.filter(c => !c.position_id || !skipPhoneIds.has(c.position_id))
+    }
+    const count = eligible.filter(c => includedStages.includes(c.stage as Stage)).length
     const percent = total > 0 ? (count / total) * 100 : 0
     const label = STAGES.find(s => s.value === stage)?.label ?? stage
     return { stage, label, count, percent: Math.round(percent * 10) / 10 }
@@ -44,6 +49,14 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('start_date')
     const endDate = searchParams.get('end_date')
 
+    // 전화 인터뷰 생략 포지션 ID 목록 조회
+    const { data: positionsData } = await supabase
+      .from('positions')
+      .select('id, skip_phone_interview')
+    const skipPhoneIds = new Set(
+      (positionsData ?? []).filter(p => p.skip_phone_interview).map(p => p.id)
+    )
+
     let query = supabase
       .from('candidates')
       .select('id, stage, outcome, position_id, sourcer_id, proposal_date, sourcer:sourcers(name)')
@@ -67,12 +80,12 @@ export async function GET(request: NextRequest) {
     const sfCands = candidates.filter(c => isSearchFirm(c))
 
     // 아웃바운드 퍼널
-    const funnelCumulative = buildCumulative(outboundCands, STAGE_ORDER)
+    const funnelCumulative = buildCumulative(outboundCands, STAGE_ORDER, skipPhoneIds)
     const funnelActive = buildActive(outboundCands, SF_STAGES)
     const total = outboundCands.length
 
     // 서치펌 퍼널 (제안발송 단계 없음)
-    const funnelSFCumulative = buildCumulative(sfCands, SF_STAGES)
+    const funnelSFCumulative = buildCumulative(sfCands, SF_STAGES, skipPhoneIds)
     const funnelSFActive = buildActive(sfCands, SF_STAGES)
     const sfTotal = sfCands.length
 
@@ -83,12 +96,13 @@ export async function GET(request: NextRequest) {
       return {
         name,
         total: firmCands.length,
-        cumulative: buildCumulative(firmCands, SF_STAGES),
+        cumulative: buildCumulative(firmCands, SF_STAGES, skipPhoneIds),
         active: buildActive(firmCands, SF_STAGES),
       }
     })
 
     return NextResponse.json({
+      _debug_skipPhoneIds: [...skipPhoneIds],
       funnel: funnelCumulative,
       funnelCumulative,
       funnelActive,

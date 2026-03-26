@@ -7,15 +7,21 @@ export async function PUT(
 ) {
   try {
     const { id } = params
-    const { name } = await request.json()
+    const body = await request.json()
+    const { name, skip_phone_interview } = body
 
     if (!name?.trim()) {
       return NextResponse.json({ error: '이름은 필수입니다.' }, { status: 400 })
     }
 
+    const updateData: { name: string; skip_phone_interview?: boolean } = { name: name.trim() }
+    if (typeof skip_phone_interview === 'boolean') {
+      updateData.skip_phone_interview = skip_phone_interview
+    }
+
     const { data, error } = await supabase
       .from('positions')
-      .update({ name: name.trim() })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single()

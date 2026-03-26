@@ -1,6 +1,7 @@
 export interface Position {
   id: string
   name: string
+  skip_phone_interview: boolean
   created_at: string
 }
 

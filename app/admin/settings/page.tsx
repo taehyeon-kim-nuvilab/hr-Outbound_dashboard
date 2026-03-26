@@ -270,8 +270,27 @@ export default function SettingsPage() {
                       </div>
                     ) : (
                       <div className="flex items-center justify-between px-3 py-2.5">
-                        <span className="text-sm text-gray-800 font-medium">{p.name}</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm text-gray-800 font-medium truncate">{p.name}</span>
+                          {p.skip_phone_interview && (
+                            <span className="shrink-0 text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">전화생략</span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={async () => {
+                              await fetch(`/api/positions/${p.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ name: p.name, skip_phone_interview: !p.skip_phone_interview }),
+                              })
+                              loadPositions()
+                            }}
+                            title={p.skip_phone_interview ? '전화 인터뷰 포함' : '전화 인터뷰 생략'}
+                            className={`text-xs px-2 py-1 rounded font-medium transition-colors ${p.skip_phone_interview ? 'text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100' : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'}`}
+                          >
+                            {p.skip_phone_interview ? '전화✓' : '전화-'}
+                          </button>
                           <button onClick={() => startEditPos(p)} className="text-gray-400 hover:text-blue-500 transition-colors p-1 rounded hover:bg-blue-50">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
