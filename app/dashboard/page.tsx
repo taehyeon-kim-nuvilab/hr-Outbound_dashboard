@@ -474,18 +474,48 @@ export default function DashboardPage() {
                         }
                         const rate = denominator > 0 ? (numerator / denominator) * 100 : 0
                         const rateColor = rate >= 50 ? 'text-green-600' : rate >= 25 ? 'text-amber-600' : 'text-red-500'
+
+                        // 지원 → 직무인터뷰 (전화생략 포지션) 추가 행
+                        let skipRow = null
+                        if (isAppliedToPhone) {
+                          const appliedItem = prev
+                          const jobItem = funnelCumulative.find(f => f.stage === 'job_interview')
+                          const skipDenom = appliedItem.countSkipOnly ?? 0
+                          const skipNum = jobItem?.countSkipOnly ?? 0
+                          if (skipDenom > 0) {
+                            const skipRate = (skipNum / skipDenom) * 100
+                            const skipRateColor = skipRate >= 50 ? 'text-green-600' : skipRate >= 25 ? 'text-amber-600' : 'text-red-500'
+                            skipRow = (
+                              <tr key="applied-to-job-skip" className="hover:bg-gray-50 bg-blue-50/30">
+                                <td className="py-2.5 pr-4 text-gray-500 whitespace-nowrap">지원 <span className="text-xs text-blue-400">(전화생략)</span></td>
+                                <td className="py-2.5 pr-4 text-gray-700 font-medium whitespace-nowrap">
+                                  <span className="flex items-center gap-1"><span className="text-gray-300">→</span>직무 인터뷰</span>
+                                </td>
+                                <td className="py-2.5 pr-4 text-right text-gray-500 whitespace-nowrap">{skipDenom}명</td>
+                                <td className="py-2.5 pr-4 text-right text-gray-700 font-medium whitespace-nowrap">{skipNum}명</td>
+                                <td className="py-2.5 text-right">
+                                  <span className={`font-bold ${skipRateColor}`}>{skipRate.toFixed(1)}%</span>
+                                </td>
+                              </tr>
+                            )
+                          }
+                        }
+
                         return (
-                          <tr key={item.stage} className="hover:bg-gray-50">
-                            <td className="py-2.5 pr-4 text-gray-500 whitespace-nowrap">{prev.label}</td>
-                            <td className="py-2.5 pr-4 text-gray-700 font-medium whitespace-nowrap">
-                              <span className="flex items-center gap-1"><span className="text-gray-300">→</span>{item.label}</span>
-                            </td>
-                            <td className="py-2.5 pr-4 text-right text-gray-500 whitespace-nowrap">{prevLabel}</td>
-                            <td className="py-2.5 pr-4 text-right text-gray-700 font-medium whitespace-nowrap">{itemLabel}</td>
-                            <td className="py-2.5 text-right">
-                              <span className={`font-bold ${rateColor}`}>{rate.toFixed(1)}%</span>
-                            </td>
-                          </tr>
+                          <>
+                            <tr key={item.stage} className="hover:bg-gray-50">
+                              <td className="py-2.5 pr-4 text-gray-500 whitespace-nowrap">{prev.label}</td>
+                              <td className="py-2.5 pr-4 text-gray-700 font-medium whitespace-nowrap">
+                                <span className="flex items-center gap-1"><span className="text-gray-300">→</span>{item.label}</span>
+                              </td>
+                              <td className="py-2.5 pr-4 text-right text-gray-500 whitespace-nowrap">{prevLabel}</td>
+                              <td className="py-2.5 pr-4 text-right text-gray-700 font-medium whitespace-nowrap">{itemLabel}</td>
+                              <td className="py-2.5 text-right">
+                                <span className={`font-bold ${rateColor}`}>{rate.toFixed(1)}%</span>
+                              </td>
+                            </tr>
+                            {skipRow}
+                          </>
                         )
                       })}
                     </tbody>

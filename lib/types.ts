@@ -51,6 +51,7 @@ export interface FunnelStats {
   label: string
   count: number
   countNoSkip?: number
+  countSkipOnly?: number
   percent: number
 }
 

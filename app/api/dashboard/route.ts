@@ -18,6 +18,7 @@ const SF_STAGES = STAGE_ORDER.slice(1) // applied → joined (제안발송 제�
 function buildCumulative(cands: CandRow[], stages: Stage[], skipPhoneIds: Set<string>) {
   const total = cands.length
   const nonSkipCands = cands.filter(c => !c.position_id || !skipPhoneIds.has(c.position_id))
+  const skipOnlyCands = cands.filter(c => c.position_id && skipPhoneIds.has(c.position_id))
   return stages.map((stage, i) => {
     const includedStages = stages.slice(i)
     // 전화 인터뷰 단계: skip 포지션 제외
@@ -25,9 +26,11 @@ function buildCumulative(cands: CandRow[], stages: Stage[], skipPhoneIds: Set<st
     const count = eligible.filter(c => includedStages.includes(c.stage as Stage)).length
     // 전환율 계산용: 항상 skip 포지션 제외한 카운트
     const countNoSkip = nonSkipCands.filter(c => includedStages.includes(c.stage as Stage)).length
+    // 전화생략 포지션만의 카운트 (지원→직무 전환율 계산용)
+    const countSkipOnly = skipOnlyCands.filter(c => includedStages.includes(c.stage as Stage)).length
     const percent = total > 0 ? (count / total) * 100 : 0
     const label = STAGES.find(s => s.value === stage)?.label ?? stage
-    return { stage, label, count, countNoSkip, percent: Math.round(percent * 10) / 10 }
+    return { stage, label, count, countNoSkip, countSkipOnly, percent: Math.round(percent * 10) / 10 }
   })
 }
 
