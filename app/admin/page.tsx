@@ -243,7 +243,7 @@ export default function AdminPage() {
     const candidate = candidates.find(c => c.id === id)
     if (!candidate) return
     // 즉시 로컬 state 업데이트
-    setCandidates(prev => prev.map(c => c.id === id ? { ...c, [field]: value || null } : c))
+    setCandidates(prev => prev.map(c => c.id === id ? { ...c, [field]: value || null } as Candidate : c))
     const body = {
       position_id: candidate.position_id,
       url: candidate.url,
