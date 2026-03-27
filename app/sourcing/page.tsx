@@ -53,6 +53,7 @@ export default function SourcingPage() {
   const [editingMessage, setEditingMessage] = useState<Record<string, string>>({})
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
   const [fadingOut, setFadingOut] = useState<Record<string, boolean>>({})
+  const [highConfidenceOnly, setHighConfidenceOnly] = useState(false)
 
   useEffect(() => {
     fetch('/api/positions')
@@ -104,6 +105,10 @@ export default function SourcingPage() {
       }, 300)
     }
   }
+
+  const displayedCandidates = highConfidenceOnly
+    ? candidates.filter(c => c.confidence === 'high')
+    : candidates
 
   const pendingCount = candidates.length
 
@@ -157,18 +162,28 @@ export default function SourcingPage() {
           <option value="wanted">원티드</option>
           <option value="remember">리멤버</option>
         </select>
+        <button
+          onClick={() => setHighConfidenceOnly(v => !v)}
+          className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+            highConfidenceOnly
+              ? 'bg-green-600 text-white border-green-600'
+              : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+          }`}
+        >
+          신뢰도 높음만
+        </button>
       </div>
 
       {/* 후보 목록 */}
       {loading ? (
         <div className="flex items-center justify-center py-20 text-gray-400 text-sm">불러오는 중...</div>
-      ) : candidates.length === 0 ? (
+      ) : displayedCandidates.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-gray-400">
           <p className="text-sm">검토할 후보자가 없습니다</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {candidates.map(c => (
+          {displayedCandidates.map(c => (
             <div key={c.id} className={`bg-white rounded-xl border border-gray-200 p-6 shadow-sm transition-opacity duration-300 ${fadingOut[c.id] ? 'opacity-0' : 'opacity-100'}`}>
               {/* 헤더 */}
               <div className="flex items-start justify-between mb-4">
