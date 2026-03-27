@@ -52,6 +52,7 @@ export default function SourcingPage() {
   const [platformFilter, setPlatformFilter] = useState('')
   const [editingMessage, setEditingMessage] = useState<Record<string, string>>({})
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
+  const [fadingOut, setFadingOut] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     fetch('/api/positions')
@@ -81,8 +82,8 @@ export default function SourcingPage() {
 
   const handleAction = async (id: string, status: 'approved' | 'rejected') => {
     setActionLoading(prev => ({ ...prev, [id]: true }))
-    // 즉시 카드 제거 (새로고침 없이)
-    setCandidates(prev => prev.filter(c => c.id !== id))
+    // 페이드 아웃 시작
+    setFadingOut(prev => ({ ...prev, [id]: true }))
     try {
       const message = editingMessage[id]
       await fetch('/api/sourcing-queue', {
@@ -92,10 +93,15 @@ export default function SourcingPage() {
       })
     } catch (err) {
       console.error(err)
-      // 실패 시 목록 재로드
+      setFadingOut(prev => ({ ...prev, [id]: false }))
       fetchCandidates()
     } finally {
-      setActionLoading(prev => ({ ...prev, [id]: false }))
+      // 애니메이션(300ms) 후 제거
+      setTimeout(() => {
+        setCandidates(prev => prev.filter(c => c.id !== id))
+        setActionLoading(prev => ({ ...prev, [id]: false }))
+        setFadingOut(prev => { const n = { ...prev }; delete n[id]; return n })
+      }, 300)
     }
   }
 
@@ -163,7 +169,7 @@ export default function SourcingPage() {
       ) : (
         <div className="space-y-4">
           {candidates.map(c => (
-            <div key={c.id} className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+            <div key={c.id} className={`bg-white rounded-xl border border-gray-200 p-6 shadow-sm transition-opacity duration-300 ${fadingOut[c.id] ? 'opacity-0' : 'opacity-100'}`}>
               {/* 헤더 */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
