@@ -225,8 +225,13 @@ export default function AdminPage() {
         return
       }
 
+      const saved = await res.json()
+      if (editingId) {
+        setCandidates(prev => prev.map(c => c.id === editingId ? { ...c, ...saved } : c))
+      } else {
+        setCandidates(prev => [saved, ...prev])
+      }
       setShowModal(false)
-      loadData()
     } catch {
       setFormError('저장 중 오류가 발생했습니다.')
     } finally {
@@ -237,6 +242,8 @@ export default function AdminPage() {
   const handleInlineUpdate = async (id: string, field: 'stage' | 'outcome' | 'sourcer_id', value: string) => {
     const candidate = candidates.find(c => c.id === id)
     if (!candidate) return
+    // 즉시 로컬 state 업데이트
+    setCandidates(prev => prev.map(c => c.id === id ? { ...c, [field]: value || null } : c))
     const body = {
       position_id: candidate.position_id,
       url: candidate.url,
@@ -251,14 +258,13 @@ export default function AdminPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-    loadData()
   }
 
   const handleDelete = async (id: string) => {
     try {
       await fetch(`/api/candidates/${id}`, { method: 'DELETE' })
+      setCandidates(prev => prev.filter(c => c.id !== id))
       setDeleteConfirm(null)
-      loadData()
     } catch (err) {
       console.error(err)
     }

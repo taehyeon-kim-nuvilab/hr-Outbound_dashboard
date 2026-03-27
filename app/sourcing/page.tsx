@@ -81,6 +81,8 @@ export default function SourcingPage() {
 
   const handleAction = async (id: string, status: 'approved' | 'rejected') => {
     setActionLoading(prev => ({ ...prev, [id]: true }))
+    // 즉시 카드 제거 (새로고침 없이)
+    setCandidates(prev => prev.filter(c => c.id !== id))
     try {
       const message = editingMessage[id]
       await fetch('/api/sourcing-queue', {
@@ -88,9 +90,10 @@ export default function SourcingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status, message_content: message }),
       })
-      await fetchCandidates()
     } catch (err) {
       console.error(err)
+      // 실패 시 목록 재로드
+      fetchCandidates()
     } finally {
       setActionLoading(prev => ({ ...prev, [id]: false }))
     }
