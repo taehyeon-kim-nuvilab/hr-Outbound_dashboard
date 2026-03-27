@@ -45,7 +45,7 @@ export type Stage =
   | 'final_accepted'
   | 'joined'
 
-export type Outcome = 'in_progress' | 'rejected' | 'withdrawn' | 'no_response'
+export type Outcome = 'in_progress' | 'rejected' | 'withdrawn' | 'no_response' | 'accepted' | 'declined'
 
 export interface FunnelStats {
   stage: Stage
@@ -77,6 +77,8 @@ export const OUTCOMES = [
   { value: 'rejected', label: '탈락' },
   { value: 'withdrawn', label: '포기' },
   { value: 'no_response', label: '무응답' },
+  { value: 'accepted', label: '수락' },
+  { value: 'declined', label: '거절' },
 ] as const
 
 // 전환율 계산에서 커피챗 제외 (유동적 단계)

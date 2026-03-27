@@ -294,6 +294,7 @@ export default function AdminPage() {
       const normalizeKey = (s: string) => s.replace(/\s/g, '')
       const outcomeMap: Record<string, string> = {
         '진행중': 'in_progress', '탈락': 'rejected', '포기': 'withdrawn',
+        '무응답': 'no_response', '수락': 'accepted', '거절': 'declined',
       }
 
       const rows = lines.slice(1).map((line, idx) => {
@@ -406,6 +407,8 @@ export default function AdminPage() {
       case 'rejected': return 'bg-red-100 text-red-700'
       case 'withdrawn': return 'bg-gray-100 text-gray-600'
       case 'no_response': return 'bg-orange-100 text-orange-700'
+      case 'accepted': return 'bg-green-100 text-green-700'
+      case 'declined': return 'bg-purple-100 text-purple-700'
       default: return 'bg-gray-100 text-gray-600'
     }
   }
