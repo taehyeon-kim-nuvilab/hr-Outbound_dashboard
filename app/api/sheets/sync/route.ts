@@ -7,15 +7,16 @@ const SHEET_NAME = process.env.GOOGLE_SHEET_NAME ?? '후보자 현황'
 
 export async function POST(request: NextRequest) {
   try {
-    const { data: candidates, error } = await supabase
-      .from('candidates')
-      .select(`
-        id, stage, outcome, memo, url, ninehire_url, proposal_date,
-        position:positions(name),
-        sourcer:sourcers(name),
-        sourcing_platform:sourcing_platforms(name)
-      `)
-      .order('proposal_date', { ascending: false })
+    const [{ data: candidates, error }, { data: positions }, { data: sourcers }, { data: platforms }] = await Promise.all([
+      supabase
+        .from('candidates')
+        .select(`id, stage, outcome, memo, url, ninehire_url, proposal_date,
+          position:positions(name), sourcer:sourcers(name), sourcing_platform:sourcing_platforms(name)`)
+        .order('proposal_date', { ascending: false }),
+      supabase.from('positions').select('name').order('name'),
+      supabase.from('sourcers').select('name').order('name'),
+      supabase.from('sourcing_platforms').select('name').order('name'),
+    ])
 
     if (error) throw error
 
@@ -61,33 +62,30 @@ export async function POST(request: NextRequest) {
     // 3. 드롭다운 및 서식 설정
     const stageLabels = Object.values(STAGE_LABELS)
     const outcomeLabels = Object.values(OUTCOME_LABELS)
+    const positionNames = (positions ?? []).map(p => p.name)
+    const sourcerNames = (sourcers ?? []).map(s => s.name)
+    const platformNames = (platforms ?? []).map(p => p.name)
+
+    const makeDropdown = (colStart: number, values: string[]) => ({
+      setDataValidation: {
+        range: { sheetId, startRowIndex: 1, endRowIndex: 10000, startColumnIndex: colStart, endColumnIndex: colStart + 1 },
+        rule: {
+          condition: { type: 'ONE_OF_LIST' as const, values: values.map(v => ({ userEnteredValue: v })) },
+          showCustomUi: true,
+          strict: false, // 새 항목 추가 시 에러 방지
+        },
+      },
+    })
 
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId: SPREADSHEET_ID,
       requestBody: {
         requests: [
-          // 단계 드롭다운 (G열, index 6)
-          {
-            setDataValidation: {
-              range: { sheetId, startRowIndex: 1, endRowIndex: 10000, startColumnIndex: 6, endColumnIndex: 7 },
-              rule: {
-                condition: { type: 'ONE_OF_LIST', values: stageLabels.map(v => ({ userEnteredValue: v })) },
-                showCustomUi: true,
-                strict: true,
-              },
-            },
-          },
-          // 결과 드롭다운 (H열, index 7)
-          {
-            setDataValidation: {
-              range: { sheetId, startRowIndex: 1, endRowIndex: 10000, startColumnIndex: 7, endColumnIndex: 8 },
-              rule: {
-                condition: { type: 'ONE_OF_LIST', values: outcomeLabels.map(v => ({ userEnteredValue: v })) },
-                showCustomUi: true,
-                strict: true,
-              },
-            },
-          },
+          makeDropdown(1, positionNames),   // B열 포지션
+          makeDropdown(4, sourcerNames),    // E열 담당자
+          makeDropdown(5, platformNames),   // F열 플랫폼
+          makeDropdown(6, stageLabels),     // G열 단계
+          makeDropdown(7, outcomeLabels),   // H열 결과
           // A열(id), K열(last_synced_at) 숨기기
           {
             updateDimensionProperties: {

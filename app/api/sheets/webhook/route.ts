@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-// 스프레드시트에서 수정 가능한 필드만 역방향 동기화
 const STAGE_MAP: Record<string, string> = {
   '제안 발송': 'proposal_sent',
   '지원': 'applied',
@@ -30,15 +29,50 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { id, stage, outcome, memo } = body as {
-      id: string
+    const { id, position, url, ninehire_url, sourcer, platform, stage, outcome, memo, proposal_date } = body as {
+      id?: string
+      position?: string
+      url?: string
+      ninehire_url?: string
+      sourcer?: string
+      platform?: string
       stage?: string
       outcome?: string
       memo?: string
+      proposal_date?: string
     }
 
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+    // 새 후보자 추가 (id 없음)
+    if (!id) {
+      // 이름으로 UUID 조회
+      const [posRes, srcRes, pltRes] = await Promise.all([
+        position ? supabase.from('positions').select('id').eq('name', position).single() : Promise.resolve({ data: null }),
+        sourcer ? supabase.from('sourcers').select('id').eq('name', sourcer).single() : Promise.resolve({ data: null }),
+        platform ? supabase.from('sourcing_platforms').select('id').eq('name', platform).single() : Promise.resolve({ data: null }),
+      ])
 
+      const { data: newCandidate, error } = await supabase
+        .from('candidates')
+        .insert({
+          position_id: posRes.data?.id ?? null,
+          url: url || null,
+          ninehire_url: ninehire_url || null,
+          sourcer_id: srcRes.data?.id ?? null,
+          sourcing_platform_id: pltRes.data?.id ?? null,
+          stage: STAGE_MAP[stage ?? ''] ?? 'proposal_sent',
+          outcome: OUTCOME_MAP[outcome ?? ''] ?? 'in_progress',
+          memo: memo || null,
+          proposal_date: proposal_date || null,
+        })
+        .select('id')
+        .single()
+
+      if (error) throw error
+
+      return NextResponse.json({ success: true, action: 'created', id: newCandidate.id })
+    }
+
+    // 기존 후보자 수정 (stage, outcome, memo만 허용)
     const updates: Record<string, string | null> = {}
     if (stage !== undefined) {
       const mapped = STAGE_MAP[stage]
@@ -61,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error
 
-    return NextResponse.json({ success: true, updated: updates })
+    return NextResponse.json({ success: true, action: 'updated', updated: updates })
   } catch (err) {
     console.error('Sheets webhook error:', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })
