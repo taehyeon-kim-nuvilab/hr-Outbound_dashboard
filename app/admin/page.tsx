@@ -95,6 +95,8 @@ export default function AdminPage() {
   const [csvPreview, setCsvPreview] = useState<any[]>([])
   const [csvError, setCsvError] = useState<string | null>(null)
   const [csvUploading, setCsvUploading] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const PAGE_SIZE = 20
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -125,6 +127,8 @@ export default function AdminPage() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  useEffect(() => { setCurrentPage(1) }, [filterSearch, filterPosition, filterSourcer, filterPlatform, filterStage, filterOutcome])
 
   const openAdd = () => {
     setEditingId(null)
@@ -401,6 +405,7 @@ export default function AdminPage() {
       case 'in_progress': return 'bg-blue-100 text-blue-700'
       case 'rejected': return 'bg-red-100 text-red-700'
       case 'withdrawn': return 'bg-gray-100 text-gray-600'
+      case 'no_response': return 'bg-orange-100 text-orange-700'
       default: return 'bg-gray-100 text-gray-600'
     }
   }
@@ -419,6 +424,9 @@ export default function AdminPage() {
     return true
   })
   const isFiltered = !!(filterSearch || filterPosition.length || filterSourcer.length || filterPlatform.length || filterStage.length || filterOutcome.length)
+
+  const totalPages = Math.ceil(filteredCandidates.length / PAGE_SIZE)
+  const pagedCandidates = filteredCandidates.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   return (
     <div>
@@ -549,12 +557,13 @@ export default function AdminPage() {
                   <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">소싱플랫폼</th>
                   <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">단계</th>
                   <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">결과</th>
+                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">발송일</th>
                   <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">메모</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">액션</th>
+                  <th className="sticky right-0 bg-gray-50 px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap z-10">액션</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {filteredCandidates.map(c => (
+                {pagedCandidates.map(c => (
                   <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {c.position?.name ?? <span className="text-gray-400">-</span>}
@@ -623,12 +632,15 @@ export default function AdminPage() {
                         ))}
                       </select>
                     </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                      {c.proposal_date ? new Date(c.proposal_date + 'T00:00:00').toLocaleDateString('ko-KR') : <span className="text-gray-300">-</span>}
+                    </td>
                     <td className="px-6 py-4 text-sm text-gray-600 max-w-[200px]">
                       <span className="truncate block max-w-[200px]" title={c.memo ?? ''}>
                         {c.memo || <span className="text-gray-400">-</span>}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="sticky right-0 bg-white px-6 py-4 z-10 shadow-[-4px_0_8px_rgba(0,0,0,0.04)]">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => openEdit(c)}
@@ -648,6 +660,43 @@ export default function AdminPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* 페이지네이션 */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 mt-2">
+            <p className="text-sm text-gray-500">
+              총 {filteredCandidates.length}명 · {currentPage}/{totalPages} 페이지
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                이전
+              </button>
+              {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                const page = totalPages <= 7 ? i + 1 : currentPage <= 4 ? i + 1 : currentPage >= totalPages - 3 ? totalPages - 6 + i : currentPage - 3 + i
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${currentPage === page ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                  >
+                    {page}
+                  </button>
+                )
+              })}
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                다음
+              </button>
+            </div>
           </div>
         )}
       </div>

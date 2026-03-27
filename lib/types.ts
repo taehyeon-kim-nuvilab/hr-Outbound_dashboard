@@ -38,13 +38,14 @@ export interface Candidate {
 export type Stage =
   | 'proposal_sent'
   | 'applied'
+  | 'coffee_chat'
   | 'phone_interview'
   | 'job_interview'
   | 'culture_interview'
   | 'final_accepted'
   | 'joined'
 
-export type Outcome = 'in_progress' | 'rejected' | 'withdrawn'
+export type Outcome = 'in_progress' | 'rejected' | 'withdrawn' | 'no_response'
 
 export interface FunnelStats {
   stage: Stage
@@ -63,6 +64,7 @@ export interface DashboardStats {
 export const STAGES = [
   { value: 'proposal_sent', label: '제안 발송' },
   { value: 'applied', label: '지원' },
+  { value: 'coffee_chat', label: '커피챗' },
   { value: 'phone_interview', label: '전화 인터뷰' },
   { value: 'job_interview', label: '직무 인터뷰' },
   { value: 'culture_interview', label: '컬처 인터뷰' },
@@ -74,11 +76,24 @@ export const OUTCOMES = [
   { value: 'in_progress', label: '진행 중' },
   { value: 'rejected', label: '탈락' },
   { value: 'withdrawn', label: '포기' },
+  { value: 'no_response', label: '무응답' },
 ] as const
+
+// 전환율 계산에서 커피챗 제외 (유동적 단계)
+export const CONVERSION_STAGE_ORDER: Stage[] = [
+  'proposal_sent',
+  'applied',
+  'phone_interview',
+  'job_interview',
+  'culture_interview',
+  'final_accepted',
+  'joined',
+]
 
 export const STAGE_ORDER: Stage[] = [
   'proposal_sent',
   'applied',
+  'coffee_chat',
   'phone_interview',
   'job_interview',
   'culture_interview',

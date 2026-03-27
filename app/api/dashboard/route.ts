@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { STAGE_ORDER, STAGES } from '@/lib/types'
+import { STAGE_ORDER, CONVERSION_STAGE_ORDER, STAGES } from '@/lib/types'
 import type { Stage } from '@/lib/types'
 
 type CandRow = {
@@ -13,7 +13,7 @@ type CandRow = {
   sourcer: { name: string } | null
 }
 
-const SF_STAGES = STAGE_ORDER.slice(1) // applied → joined (제안발송 제외)
+const SF_STAGES = CONVERSION_STAGE_ORDER.slice(1) // applied → joined (제안발송·커피챗 제외)
 
 function buildCumulative(cands: CandRow[], stages: Stage[], skipPhoneIds: Set<string>) {
   const total = cands.length
@@ -83,12 +83,13 @@ export async function GET(request: NextRequest) {
     const sfCands = candidates.filter(c => isSearchFirm(c))
 
     // 아웃바운드 퍼널
-    const funnelCumulative = buildCumulative(outboundCands, STAGE_ORDER, skipPhoneIds)
+    const funnelCumulative = buildCumulative(outboundCands, CONVERSION_STAGE_ORDER, skipPhoneIds)
     const funnelActive = buildActive(outboundCands, SF_STAGES)
     const total = outboundCands.length
 
     // 서치펌 퍼널 (제안발송 단계 없음)
     const funnelSFCumulative = buildCumulative(sfCands, SF_STAGES, skipPhoneIds)
+
     const funnelSFActive = buildActive(sfCands, SF_STAGES)
     const sfTotal = sfCands.length
 
