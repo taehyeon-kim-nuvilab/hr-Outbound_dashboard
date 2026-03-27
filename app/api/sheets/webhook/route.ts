@@ -29,8 +29,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { id, position, url, ninehire_url, sourcer, platform, stage, outcome, memo, proposal_date } = body as {
+    const { id, row_key, position, url, ninehire_url, sourcer, platform, stage, outcome, memo, proposal_date } = body as {
       id?: string
+      row_key?: string
       position?: string
       url?: string
       ninehire_url?: string
@@ -42,60 +43,57 @@ export async function POST(request: NextRequest) {
       proposal_date?: string
     }
 
-    // 새 후보자 추가 (id 없음)
-    if (!id) {
-      // 이름으로 UUID 조회
-      const [posRes, srcRes, pltRes] = await Promise.all([
-        position ? supabase.from('positions').select('id').eq('name', position).single() : Promise.resolve({ data: null }),
-        sourcer ? supabase.from('sourcers').select('id').eq('name', sourcer).single() : Promise.resolve({ data: null }),
-        platform ? supabase.from('sourcing_platforms').select('id').eq('name', platform).single() : Promise.resolve({ data: null }),
-      ])
-
-      const { data: newCandidate, error } = await supabase
-        .from('candidates')
-        .insert({
-          position_id: posRes.data?.id ?? null,
-          url: url || null,
-          ninehire_url: ninehire_url || null,
-          sourcer_id: srcRes.data?.id ?? null,
-          sourcing_platform_id: pltRes.data?.id ?? null,
-          stage: STAGE_MAP[stage ?? ''] ?? 'proposal_sent',
-          outcome: OUTCOME_MAP[outcome ?? ''] ?? 'in_progress',
-          memo: memo || null,
-          proposal_date: proposal_date || null,
-        })
-        .select('id')
-        .single()
-
-      if (error) throw error
-
-      return NextResponse.json({ success: true, action: 'created', id: newCandidate.id })
-    }
-
     // 기존 후보자 수정 (stage, outcome, memo만 허용)
-    const updates: Record<string, string | null> = {}
-    if (stage !== undefined) {
-      const mapped = STAGE_MAP[stage]
-      if (mapped) updates.stage = mapped
-    }
-    if (outcome !== undefined) {
-      const mapped = OUTCOME_MAP[outcome]
-      if (mapped) updates.outcome = mapped
-    }
-    if (memo !== undefined) updates.memo = memo || null
+    if (id) {
+      const updates: Record<string, string | null> = {}
+      if (stage !== undefined) {
+        const mapped = STAGE_MAP[stage]
+        if (mapped) updates.stage = mapped
+      }
+      if (outcome !== undefined) {
+        const mapped = OUTCOME_MAP[outcome]
+        if (mapped) updates.outcome = mapped
+      }
+      if (memo !== undefined) updates.memo = memo || null
 
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json({ message: 'no editable fields' })
+      if (Object.keys(updates).length === 0) {
+        return NextResponse.json({ message: 'no editable fields' })
+      }
+
+      const { error } = await supabase.from('candidates').update(updates).eq('id', id)
+      if (error) throw error
+      return NextResponse.json({ success: true, action: 'updated', updated: updates })
     }
 
-    const { error } = await supabase
+    // 새 후보자 추가: row_key 기준 upsert (중복 방지)
+    if (!row_key) return NextResponse.json({ error: 'row_key required for new candidate' }, { status: 400 })
+
+    const [posRes, srcRes, pltRes] = await Promise.all([
+      position ? supabase.from('positions').select('id').eq('name', position).single() : Promise.resolve({ data: null }),
+      sourcer ? supabase.from('sourcers').select('id').eq('name', sourcer).single() : Promise.resolve({ data: null }),
+      platform ? supabase.from('sourcing_platforms').select('id').eq('name', platform).single() : Promise.resolve({ data: null }),
+    ])
+
+    const { data: upserted, error } = await supabase
       .from('candidates')
-      .update(updates)
-      .eq('id', id)
+      .upsert({
+        sheet_row_key: row_key,
+        position_id: posRes.data?.id ?? null,
+        url: url || null,
+        ninehire_url: ninehire_url || null,
+        sourcer_id: srcRes.data?.id ?? null,
+        sourcing_platform_id: pltRes.data?.id ?? null,
+        stage: STAGE_MAP[stage ?? ''] ?? 'proposal_sent',
+        outcome: OUTCOME_MAP[outcome ?? ''] ?? 'in_progress',
+        memo: memo || null,
+        proposal_date: proposal_date || null,
+      }, { onConflict: 'sheet_row_key' })
+      .select('id')
+      .single()
 
     if (error) throw error
 
-    return NextResponse.json({ success: true, action: 'updated', updated: updates })
+    return NextResponse.json({ success: true, action: 'created', id: upserted.id })
   } catch (err) {
     console.error('Sheets webhook error:', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })
