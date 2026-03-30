@@ -56,6 +56,10 @@ export default function SourcingPage() {
   const [highConfidenceOnly, setHighConfidenceOnly] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const PAGE_SIZE = 10
+  const [potentialMemo, setPotentialMemo] = useState<Record<string, string>>({})
+  const [potentialOpen, setPotentialOpen] = useState<Record<string, boolean>>({})
+  const [potentialLoading, setPotentialLoading] = useState<Record<string, boolean>>({})
+  const [potentialSaved, setPotentialSaved] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     fetch('/api/positions')
@@ -82,6 +86,31 @@ export default function SourcingPage() {
   }, [statusTab, positionFilter, platformFilter])
 
   useEffect(() => { fetchCandidates(); setCurrentPage(1) }, [fetchCandidates])
+
+  const handleSavePotential = async (c: SourcingCandidate) => {
+    setPotentialLoading(prev => ({ ...prev, [c.id]: true }))
+    try {
+      const res = await fetch('/api/sheets/save-potential', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourcing_id: c.id,
+          position: c.position?.name ?? '',
+          url: c.candidate_url,
+          platform: c.platform,
+          memo: potentialMemo[c.id] ?? '',
+        }),
+      })
+      if (res.ok) {
+        setPotentialSaved(prev => ({ ...prev, [c.id]: true }))
+        setPotentialOpen(prev => ({ ...prev, [c.id]: false }))
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setPotentialLoading(prev => ({ ...prev, [c.id]: false }))
+    }
+  }
 
   const handleAction = async (id: string, status: 'approved' | 'rejected') => {
     setActionLoading(prev => ({ ...prev, [id]: true }))
@@ -297,6 +326,45 @@ export default function SourcingPage() {
                   </button>
                 </div>
               )}
+
+              {/* 잠재 후보자 저장 */}
+              <div className="mt-3 border-t border-gray-100 pt-3">
+                {potentialSaved[c.id] ? (
+                  <span className="text-xs text-green-600 font-medium">✓ 잠재 후보자 시트에 저장됨</span>
+                ) : potentialOpen[c.id] ? (
+                  <div className="space-y-2">
+                    <textarea
+                      rows={2}
+                      value={potentialMemo[c.id] ?? ''}
+                      onChange={e => setPotentialMemo(prev => ({ ...prev, [c.id]: e.target.value }))}
+                      placeholder="저장 메모 입력 (선택사항)"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleSavePotential(c)}
+                        disabled={potentialLoading[c.id]}
+                        className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                      >
+                        {potentialLoading[c.id] ? '저장 중...' : '시트에 저장'}
+                      </button>
+                      <button
+                        onClick={() => setPotentialOpen(prev => ({ ...prev, [c.id]: false }))}
+                        className="px-3 py-1.5 text-xs text-gray-500 rounded-lg border border-gray-200 hover:bg-gray-50"
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setPotentialOpen(prev => ({ ...prev, [c.id]: true }))}
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    + 잠재 후보자로 저장
+                  </button>
+                )}
+              </div>
 
               <p className="text-xs text-gray-400 mt-3">
                 수집일: {new Date(c.created_at).toLocaleDateString('ko-KR')}
