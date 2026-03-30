@@ -299,8 +299,40 @@ export default function SourcingPage() {
                 </div>
               )}
 
-              {/* 발송된 메시지 표시 */}
-              {statusTab !== 'pending' && c.message_content && (
+              {/* 승인됨 탭: 메시지 수정 가능 */}
+              {statusTab === 'approved' && (
+                <div className="mb-4">
+                  <p className="text-xs text-gray-500 mb-1.5 font-medium">발송 메시지 (수정 가능)</p>
+                  <textarea
+                    rows={4}
+                    value={editingMessage[c.id] ?? c.message_content ?? ''}
+                    onChange={e => setEditingMessage(prev => ({ ...prev, [c.id]: e.target.value }))}
+                    placeholder="메시지를 수정하세요..."
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+                  />
+                  <button
+                    onClick={async () => {
+                      setActionLoading(prev => ({ ...prev, [c.id]: true }))
+                      try {
+                        await fetch('/api/sourcing-queue', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ id: c.id, message_content: editingMessage[c.id] }),
+                        })
+                      } finally {
+                        setActionLoading(prev => ({ ...prev, [c.id]: false }))
+                      }
+                    }}
+                    disabled={actionLoading[c.id] || !(editingMessage[c.id] !== undefined && editingMessage[c.id] !== c.message_content)}
+                    className="mt-2 px-3 py-1.5 bg-violet-600 text-white text-xs font-medium rounded-lg hover:bg-violet-700 disabled:opacity-40 transition-colors"
+                  >
+                    {actionLoading[c.id] ? '저장 중...' : '저장'}
+                  </button>
+                </div>
+              )}
+
+              {/* 발송된 메시지 표시 (message_sent, rejected) */}
+              {statusTab !== 'pending' && statusTab !== 'approved' && c.message_content && (
                 <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                   <p className="text-xs text-gray-500 mb-1 font-medium">발송 메시지</p>
                   <p className="text-sm text-gray-700 whitespace-pre-wrap">{c.message_content}</p>
