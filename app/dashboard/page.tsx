@@ -457,6 +457,7 @@ export default function DashboardPage() {
                     <tbody className="divide-y divide-gray-50">
                       {funnelCumulative.slice(1).map((item, idx) => {
                         const prev = funnelCumulative[idx]
+                        if (item.stage === 'coffee_chat' || prev.stage === 'coffee_chat') return null
                         const isAppliedToPhone = prev.stage === 'applied' && item.stage === 'phone_interview'
                         const isPhoneToJob = prev.stage === 'phone_interview' && item.stage === 'job_interview'
                         let numerator = item.count
@@ -675,6 +676,7 @@ export default function DashboardPage() {
                         <tbody className="divide-y divide-gray-50">
                           {displaySFCumulative.slice(1).map((item, idx) => {
                             const prev = displaySFCumulative[idx]
+                            if (item.stage === 'coffee_chat' || prev.stage === 'coffee_chat') return null
                             const isAppliedToPhone = prev.stage === 'applied' && item.stage === 'phone_interview'
                             const isPhoneToJob = prev.stage === 'phone_interview' && item.stage === 'job_interview'
                             let numerator = item.count

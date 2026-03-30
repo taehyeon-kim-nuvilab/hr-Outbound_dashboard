@@ -81,10 +81,10 @@ export const OUTCOMES = [
   { value: 'declined', label: '거절' },
 ] as const
 
-// 전환율 계산에서 커피챗 제외 (유동적 단계)
 export const CONVERSION_STAGE_ORDER: Stage[] = [
   'proposal_sent',
   'applied',
+  'coffee_chat',
   'phone_interview',
   'job_interview',
   'culture_interview',
