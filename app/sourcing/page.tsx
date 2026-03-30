@@ -54,6 +54,8 @@ export default function SourcingPage() {
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
   const [fadingOut, setFadingOut] = useState<Record<string, boolean>>({})
   const [highConfidenceOnly, setHighConfidenceOnly] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const PAGE_SIZE = 10
 
   useEffect(() => {
     fetch('/api/positions')
@@ -79,7 +81,7 @@ export default function SourcingPage() {
     }
   }, [statusTab, positionFilter, platformFilter])
 
-  useEffect(() => { fetchCandidates() }, [fetchCandidates])
+  useEffect(() => { fetchCandidates(); setCurrentPage(1) }, [fetchCandidates])
 
   const handleAction = async (id: string, status: 'approved' | 'rejected') => {
     setActionLoading(prev => ({ ...prev, [id]: true }))
@@ -106,9 +108,12 @@ export default function SourcingPage() {
     }
   }
 
-  const displayedCandidates = highConfidenceOnly
+  const filteredCandidates = highConfidenceOnly
     ? candidates.filter(c => c.confidence === 'high')
     : candidates
+
+  const totalPages = Math.ceil(filteredCandidates.length / PAGE_SIZE)
+  const displayedCandidates = filteredCandidates.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   const pendingCount = candidates.length
 
@@ -298,6 +303,27 @@ export default function SourcingPage() {
               </p>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* 페이지네이션 */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-6">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+          >
+            이전
+          </button>
+          <span className="text-sm text-gray-500">{currentPage} / {totalPages}</span>
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+          >
+            다음
+          </button>
         </div>
       )}
     </div>
