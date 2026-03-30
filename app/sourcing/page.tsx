@@ -308,17 +308,42 @@ export default function SourcingPage() {
 
       {/* 페이지네이션 */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-6">
+        <div className="flex items-center justify-center gap-1 mt-6">
           <button
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
             disabled={currentPage === 1}
             className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
           >
             이전
           </button>
-          <span className="text-sm text-gray-500">{currentPage} / {totalPages}</span>
+          {(() => {
+            const pages = []
+            const delta = 2
+            const left = Math.max(1, currentPage - delta)
+            const right = Math.min(totalPages, currentPage + delta)
+            if (left > 1) {
+              pages.push(1)
+              if (left > 2) pages.push('...')
+            }
+            for (let i = left; i <= right; i++) pages.push(i)
+            if (right < totalPages) {
+              if (right < totalPages - 1) pages.push('...')
+              pages.push(totalPages)
+            }
+            return pages.map((p, idx) =>
+              p === '...'
+                ? <span key={`ellipsis-${idx}`} className="px-2 text-gray-400 text-sm">…</span>
+                : <button
+                    key={p}
+                    onClick={() => { setCurrentPage(p as number); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className={`px-3 py-1.5 text-sm rounded-lg border ${currentPage === p ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                  >
+                    {p}
+                  </button>
+            )
+          })()}
           <button
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
             disabled={currentPage === totalPages}
             className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
           >
