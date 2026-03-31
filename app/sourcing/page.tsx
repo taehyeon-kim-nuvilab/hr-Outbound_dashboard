@@ -26,6 +26,7 @@ interface SourcingCandidate {
   confidence: string | null
   status: string
   message_content: string | null
+  sourcer_id: string | null
   created_at: string
 }
 
@@ -311,7 +312,7 @@ export default function SourcingPage() {
                 </div>
               )}
 
-              {/* 승인됨 탭: 메시지 수정 가능 */}
+              {/* 승인됨 탭: 메시지 + 담당자 수정 가능 */}
               {statusTab === 'approved' && (
                 <div className="mb-4">
                   <p className="text-xs text-gray-500 mb-1.5 font-medium">발송 메시지 (수정 가능)</p>
@@ -322,24 +323,42 @@ export default function SourcingPage() {
                     placeholder="메시지를 수정하세요..."
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
                   />
-                  <button
-                    onClick={async () => {
-                      setActionLoading(prev => ({ ...prev, [c.id]: true }))
-                      try {
-                        await fetch('/api/sourcing-queue', {
-                          method: 'PATCH',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ id: c.id, message_content: editingMessage[c.id] }),
-                        })
-                      } finally {
-                        setActionLoading(prev => ({ ...prev, [c.id]: false }))
-                      }
-                    }}
-                    disabled={actionLoading[c.id] || !(editingMessage[c.id] !== undefined && editingMessage[c.id] !== c.message_content)}
-                    className="mt-2 px-3 py-1.5 bg-violet-600 text-white text-xs font-medium rounded-lg hover:bg-violet-700 disabled:opacity-40 transition-colors"
-                  >
-                    {actionLoading[c.id] ? '저장 중...' : '저장'}
-                  </button>
+                  <div className="flex items-center gap-2 mt-2">
+                    <select
+                      value={selectedSourcer[c.id] ?? c.sourcer_id ?? ''}
+                      onChange={e => setSelectedSourcer(prev => ({ ...prev, [c.id]: e.target.value }))}
+                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 bg-white"
+                    >
+                      <option value="">담당자 선택</option>
+                      {sourcers.map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={async () => {
+                        setActionLoading(prev => ({ ...prev, [c.id]: true }))
+                        try {
+                          await fetch('/api/sourcing-queue', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              id: c.id,
+                              status: 'approved',
+                              message_content: editingMessage[c.id],
+                              sourcer_id: selectedSourcer[c.id] || undefined,
+                            }),
+                          })
+                          await fetchCandidates()
+                        } finally {
+                          setActionLoading(prev => ({ ...prev, [c.id]: false }))
+                        }
+                      }}
+                      disabled={actionLoading[c.id]}
+                      className="px-3 py-1.5 bg-violet-600 text-white text-xs font-medium rounded-lg hover:bg-violet-700 disabled:opacity-40 transition-colors"
+                    >
+                      {actionLoading[c.id] ? '저장 중...' : '저장'}
+                    </button>
+                  </div>
                 </div>
               )}
 
