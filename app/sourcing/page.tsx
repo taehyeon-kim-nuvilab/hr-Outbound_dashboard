@@ -7,6 +7,11 @@ interface Position {
   name: string
 }
 
+interface Sourcer {
+  id: string
+  name: string
+}
+
 interface SourcingCandidate {
   id: string
   platform: string
@@ -46,6 +51,8 @@ const STATUS_TABS = [
 export default function SourcingPage() {
   const [candidates, setCandidates] = useState<SourcingCandidate[]>([])
   const [positions, setPositions] = useState<Position[]>([])
+  const [sourcers, setSourcers] = useState<Sourcer[]>([])
+  const [selectedSourcer, setSelectedSourcer] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [statusTab, setStatusTab] = useState('pending')
   const [positionFilter, setPositionFilter] = useState('')
@@ -65,6 +72,10 @@ export default function SourcingPage() {
     fetch('/api/positions')
       .then(r => r.json())
       .then(data => setPositions(Array.isArray(data) ? data : []))
+      .catch(console.error)
+    fetch('/api/sourcers')
+      .then(r => r.json())
+      .then(data => setSourcers(Array.isArray(data) ? data : []))
       .catch(console.error)
   }, [])
 
@@ -118,10 +129,11 @@ export default function SourcingPage() {
     setFadingOut(prev => ({ ...prev, [id]: true }))
     try {
       const message = editingMessage[id]
+      const sourcer_id = selectedSourcer[id] || undefined
       await fetch('/api/sourcing-queue', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status, message_content: message }),
+        body: JSON.stringify({ id, status, message_content: message, sourcer_id }),
       })
     } catch (err) {
       console.error(err)
@@ -341,7 +353,17 @@ export default function SourcingPage() {
 
               {/* 액션 버튼 */}
               {statusTab === 'pending' && (
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedSourcer[c.id] ?? ''}
+                    onChange={e => setSelectedSourcer(prev => ({ ...prev, [c.id]: e.target.value }))}
+                    className="border border-gray-200 rounded-lg px-2 py-2 text-sm text-gray-700 bg-white"
+                  >
+                    <option value="">담당자 선택</option>
+                    {sourcers.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
                   <button
                     onClick={() => handleAction(c.id, 'approved')}
                     disabled={actionLoading[c.id]}

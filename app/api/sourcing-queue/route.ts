@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id, status, message_content } = body
+    const { id, status, message_content, sourcer_id } = body
 
     if (!id || !status) {
       return NextResponse.json({ error: 'id, status 필수' }, { status: 400 })
@@ -49,6 +49,10 @@ export async function PATCH(request: NextRequest) {
 
     if (message_content !== undefined) {
       updateData.message_content = message_content
+    }
+
+    if (sourcer_id !== undefined) {
+      updateData.sourcer_id = sourcer_id
     }
 
     const { data, error } = await supabase
