@@ -338,7 +338,7 @@ export default function SourcingPage() {
                       onClick={async () => {
                         setActionLoading(prev => ({ ...prev, [c.id]: true }))
                         try {
-                          await fetch('/api/sourcing-queue', {
+                          const res = await fetch('/api/sourcing-queue', {
                             method: 'PATCH',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -348,7 +348,10 @@ export default function SourcingPage() {
                               sourcer_id: selectedSourcer[c.id] || undefined,
                             }),
                           })
-                          await fetchCandidates()
+                          if (res.ok) {
+                            const updated = await res.json()
+                            setCandidates(prev => prev.map(item => item.id === c.id ? { ...item, ...updated } : item))
+                          }
                         } finally {
                           setActionLoading(prev => ({ ...prev, [c.id]: false }))
                         }
