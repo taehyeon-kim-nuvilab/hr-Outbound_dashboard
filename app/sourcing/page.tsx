@@ -124,6 +124,28 @@ export default function SourcingPage() {
     }
   }
 
+  const handleRevert = async (id: string) => {
+    setActionLoading(prev => ({ ...prev, [id]: true }))
+    setFadingOut(prev => ({ ...prev, [id]: true }))
+    try {
+      await fetch('/api/sourcing-queue', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: 'pending' }),
+      })
+    } catch (err) {
+      console.error(err)
+      setFadingOut(prev => ({ ...prev, [id]: false }))
+      fetchCandidates()
+    } finally {
+      setTimeout(() => {
+        setCandidates(prev => prev.filter(c => c.id !== id))
+        setActionLoading(prev => ({ ...prev, [id]: false }))
+        setFadingOut(prev => { const n = { ...prev }; delete n[id]; return n })
+      }, 300)
+    }
+  }
+
   const handleAction = async (id: string, status: 'approved' | 'rejected') => {
     setActionLoading(prev => ({ ...prev, [id]: true }))
     // 페이드 아웃 시작
@@ -360,6 +382,13 @@ export default function SourcingPage() {
                       className="px-3 py-1.5 bg-violet-600 text-white text-xs font-medium rounded-lg hover:bg-violet-700 disabled:opacity-40 transition-colors"
                     >
                       {actionLoading[c.id] ? '저장 중...' : '저장'}
+                    </button>
+                    <button
+                      onClick={() => handleRevert(c.id)}
+                      disabled={actionLoading[c.id]}
+                      className="px-3 py-1.5 bg-white text-red-500 text-xs font-medium rounded-lg border border-red-200 hover:bg-red-50 disabled:opacity-40 transition-colors"
+                    >
+                      검토 대기로 되돌리기
                     </button>
                   </div>
                 </div>
