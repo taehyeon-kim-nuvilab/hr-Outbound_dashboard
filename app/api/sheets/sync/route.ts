@@ -12,7 +12,8 @@ export async function POST(request: NextRequest) {
         .from('candidates')
         .select(`id, stage, outcome, memo, url, ninehire_url, proposal_date,
           position:positions(name), sourcer:sourcers(name), sourcing_platform:sourcing_platforms(name)`)
-        .order('proposal_date', { ascending: false }),
+        .order('created_at', { ascending: false })
+        .order('proposal_date', { ascending: false, nullsFirst: false }),
       supabase.from('positions').select('name').order('name'),
       supabase.from('sourcers').select('name').order('name'),
       supabase.from('sourcing_platforms').select('name').order('name'),

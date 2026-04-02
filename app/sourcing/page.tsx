@@ -152,7 +152,7 @@ export default function SourcingPage() {
     setFadingOut(prev => ({ ...prev, [id]: true }))
     try {
       const message = editingMessage[id]
-      const sourcer_id = selectedSourcer[id] || undefined
+      const sourcer_id = selectedSourcer[id] || null
       await fetch('/api/sourcing-queue', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -367,7 +367,7 @@ export default function SourcingPage() {
                               id: c.id,
                               status: 'approved',
                               message_content: editingMessage[c.id],
-                              sourcer_id: selectedSourcer[c.id] || undefined,
+                              sourcer_id: selectedSourcer[c.id] ?? c.sourcer_id ?? null,
                             }),
                           })
                           if (res.ok) {
