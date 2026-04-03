@@ -61,7 +61,7 @@ export default function SourcingPage() {
   const [editingMessage, setEditingMessage] = useState<Record<string, string>>({})
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
   const [fadingOut, setFadingOut] = useState<Record<string, boolean>>({})
-  const [highConfidenceOnly, setHighConfidenceOnly] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const PAGE_SIZE = 10
   const [potentialMemo, setPotentialMemo] = useState<Record<string, string>>({})
@@ -173,8 +173,14 @@ export default function SourcingPage() {
     }
   }
 
-  const filteredCandidates = highConfidenceOnly
-    ? candidates.filter(c => c.confidence === 'high')
+  const filteredCandidates = searchQuery
+    ? candidates.filter(c => {
+        const q = searchQuery.toLowerCase()
+        return (c.candidate_url?.toLowerCase().includes(q))
+          || (c.recent_company?.toLowerCase().includes(q))
+          || (c.message_content?.toLowerCase().includes(q))
+          || (c.ai_note?.toLowerCase().includes(q))
+      })
     : candidates
 
   const totalPages = Math.ceil(filteredCandidates.length / PAGE_SIZE)
@@ -232,16 +238,13 @@ export default function SourcingPage() {
           <option value="wanted">원티드</option>
           <option value="remember">리멤버</option>
         </select>
-        <button
-          onClick={() => setHighConfidenceOnly(v => !v)}
-          className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
-            highConfidenceOnly
-              ? 'bg-green-600 text-white border-green-600'
-              : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-          }`}
-        >
-          신뢰도 높음만
-        </button>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1) }}
+          placeholder="URL / 회사명 / 메모 검색"
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 w-64"
+        />
       </div>
 
       {/* 후보 목록 */}
