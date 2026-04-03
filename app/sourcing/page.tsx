@@ -110,6 +110,7 @@ export default function SourcingPage() {
           position: c.position?.name ?? '',
           url: c.candidate_url,
           platform: c.platform,
+          recent_company: c.recent_company ?? '',
           memo: potentialMemo[c.id] ?? '',
         }),
       })

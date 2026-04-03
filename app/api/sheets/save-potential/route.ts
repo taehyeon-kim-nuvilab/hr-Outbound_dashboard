@@ -4,11 +4,11 @@ import { getSheetsClient } from '@/lib/sheets'
 const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID!
 const SHEET_NAME = '잠재 후보자'
 
-const HEADER_ROW = ['sourcing_id', '포지션', '링크', '플랫폼', '메모', '저장일시']
+const HEADER_ROW = ['sourcing_id', '포지션', '링크', '플랫폼', '최근 재직', '메모', '저장일시']
 
 export async function POST(request: NextRequest) {
   try {
-    const { sourcing_id, position, url, platform, memo } = await request.json()
+    const { sourcing_id, position, url, platform, recent_company, memo } = await request.json()
 
     if (!url) {
       return NextResponse.json({ error: '후보자 링크가 없습니다.' }, { status: 400 })
@@ -44,11 +44,11 @@ export async function POST(request: NextRequest) {
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A:F`,
+      range: `${SHEET_NAME}!A:G`,
       valueInputOption: 'USER_ENTERED',
       insertDataOption: 'INSERT_ROWS',
       requestBody: {
-        values: [[sourcing_id ?? '', position ?? '', url, platform ?? '', memo ?? '', kstDate]],
+        values: [[sourcing_id ?? '', position ?? '', url, platform ?? '', recent_company ?? '', memo ?? '', kstDate]],
       },
     })
 
