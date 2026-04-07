@@ -296,9 +296,31 @@ export default function DashboardPage() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">아웃바운드 채용 대시보드</h1>
-        <p className="mt-1 text-gray-500">채용 파이프라인 현황을 한눈에 확인하세요</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">아웃바운드 채용 대시보드</h1>
+          <p className="mt-1 text-gray-500">채용 파이프라인 현황을 한눈에 확인하세요</p>
+        </div>
+        <button
+          onClick={async () => {
+            const btn = document.getElementById('sync-btn') as HTMLButtonElement
+            btn.disabled = true
+            btn.textContent = '동기화 중...'
+            try {
+              const res = await fetch('/api/sheets/sync', { method: 'POST' })
+              const data = await res.json()
+              btn.textContent = `동기화 완료 (${data.synced ?? 0}명)`
+              setTimeout(() => { btn.textContent = '시트 동기화'; btn.disabled = false }, 3000)
+            } catch {
+              btn.textContent = '동기화 실패'
+              setTimeout(() => { btn.textContent = '시트 동기화'; btn.disabled = false }, 3000)
+            }
+          }}
+          id="sync-btn"
+          className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors"
+        >
+          시트 동기화
+        </button>
       </div>
 
       {/* Filters */}

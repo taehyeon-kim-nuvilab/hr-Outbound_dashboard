@@ -5,7 +5,16 @@ import { getSheetsClient, HEADER_ROW, STAGE_LABELS, OUTCOME_LABELS } from '@/lib
 const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID!
 const SHEET_NAME = process.env.GOOGLE_SHEET_NAME ?? '후보자 현황'
 
+// Vercel Cron (GET) + 수동 호출 (POST) 모두 지원
+export async function GET(request: NextRequest) {
+  return handleSync(request)
+}
+
 export async function POST(request: NextRequest) {
+  return handleSync(request)
+}
+
+async function handleSync(request: NextRequest) {
   try {
     const [{ data: candidates, error }, { data: positions }, { data: sourcers }, { data: platforms }] = await Promise.all([
       supabase
