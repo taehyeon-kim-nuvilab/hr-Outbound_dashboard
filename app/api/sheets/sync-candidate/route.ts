@@ -71,6 +71,14 @@ export async function POST(request: NextRequest) {
     const ids = (idCol.data.values ?? []).flat()
     const idx = ids.indexOf(candidateId)
 
+    // 시트 ID 조회 (행 삽입에 필요)
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID })
+    const sheetMeta = meta.data.sheets?.find(s => s.properties?.title === SHEET_NAME)
+    if (!sheetMeta?.properties) {
+      return NextResponse.json({ error: `sheet "${SHEET_NAME}" not found` }, { status: 500 })
+    }
+    const sheetId = sheetMeta.properties.sheetId!
+
     if (idx >= 0) {
       // 기존 행 업데이트
       const rowNum = idx + 2
@@ -82,15 +90,38 @@ export async function POST(request: NextRequest) {
       })
       return NextResponse.json({ ok: true, action: 'updated', row: rowNum })
     } else {
-      // 새 행 추가
-      await sheets.spreadsheets.values.append({
+      // 새 행 추가 — 행 삽입 + 데이터 쓰기를 batchUpdate 하나로 atomic 처리
+      await sheets.spreadsheets.batchUpdate({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_NAME}!A:K`,
-        valueInputOption: 'USER_ENTERED',
-        insertDataOption: 'INSERT_ROWS',
-        requestBody: { values: [row] },
+        requestBody: {
+          requests: [
+            {
+              insertDimension: {
+                range: { sheetId, dimension: 'ROWS', startIndex: 1, endIndex: 2 },
+                inheritFromBefore: false,
+              },
+            },
+            {
+              updateCells: {
+                range: {
+                  sheetId,
+                  startRowIndex: 1,
+                  endRowIndex: 2,
+                  startColumnIndex: 0,
+                  endColumnIndex: row.length,
+                },
+                rows: [{
+                  values: row.map(val => ({
+                    userEnteredValue: { stringValue: String(val) },
+                  })),
+                }],
+                fields: 'userEnteredValue',
+              },
+            },
+          ],
+        },
       })
-      return NextResponse.json({ ok: true, action: 'appended' })
+      return NextResponse.json({ ok: true, action: 'inserted_top', row: 2 })
     }
   } catch (err) {
     console.error('sync-candidate error:', err)

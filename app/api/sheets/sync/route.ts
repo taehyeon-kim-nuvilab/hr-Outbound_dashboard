@@ -51,17 +51,20 @@ async function handleSync(request: NextRequest) {
 
     const sheets = getSheetsClient()
 
-    // 1. 전체 시트 초기화 및 헤더+데이터 기록
-    await sheets.spreadsheets.values.clear({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A:K`,
-    })
-
+    // 1. 헤더+데이터를 한번에 덮어쓰기 (clear 없이 atomic하게)
+    const allValues = [HEADER_ROW, ...rows]
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A1`,
+      range: `${SHEET_NAME}!A1:K${allValues.length}`,
       valueInputOption: 'USER_ENTERED',
-      requestBody: { values: [HEADER_ROW, ...rows] },
+      requestBody: { values: allValues },
+    })
+
+    // 데이터 아래 남은 이전 행 제거
+    const clearFrom = allValues.length + 1
+    await sheets.spreadsheets.values.clear({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SHEET_NAME}!A${clearFrom}:K`,
     })
 
     // 2. 시트 ID 조회
